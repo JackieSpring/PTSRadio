@@ -8,6 +8,12 @@ public class PTSConstants {
     USB_PRODUCT_ID  = 29987,
     USB_CLASS       = 255,
     USB_SUBCLASS    = 0,
-    USB_PROTOCOL    = 0;
+    USB_PROTOCOL    = 0,
 
+    PACKET_INVALID_BYTES = 2,
+    PACKET_MAX_LEN = 26,
+
+    PING_TIMEOUT = 60,
+
+    SERVICE_TIMEOUT = 45;
 }

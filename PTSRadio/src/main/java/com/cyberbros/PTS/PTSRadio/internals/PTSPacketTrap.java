@@ -1,12 +1,15 @@
 package com.cyberbros.PTS.PTSRadio.internals;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 public abstract class PTSPacketTrap {
     private PTSPacketTrap prev;
     private PTSPacketTrap next;
 
-    public void destroy(){
+
+    public synchronized void destroy(){
         if ( prev != null )
             prev.next = next;
 
@@ -14,14 +17,14 @@ public abstract class PTSPacketTrap {
             next.prev = prev;
     }
 
-    public void destroyChain(){
+    public synchronized void destroyChain(){
         PTSPacketTrap n = next;
         destroy();
         if ( n != null )
             n.destroyChain();
     }
 
-    public void addNext( PTSPacketTrap newtrap ){
+    public synchronized void addNext( PTSPacketTrap newtrap ){
         if ( newtrap != null ) {
             newtrap.prev = this;
             newtrap.next = next;
@@ -29,18 +32,37 @@ public abstract class PTSPacketTrap {
         this.next = newtrap;
     }
 
-    public void addPrev( @NonNull PTSPacketTrap newtrap ){
+    public synchronized void addPrev( @NonNull PTSPacketTrap newtrap ){
         newtrap.next = this;
         newtrap.prev = prev;
         prev = newtrap;
     }
 
-    public void handle( PTSPacket pk ){
-        if ( ! this.trap(pk) && next != null )
+    public synchronized void handle( PTSPacket pk ){
+        if ( this.trap(pk) == false && next != null )
             next.handle(pk);
     }
 
     // Return true to stop packet propagation
     public abstract boolean trap( PTSPacket pk );
 
+
+
+
+
+    // TODO: DEBUG
+    public void printChain(){
+        Log.d("printCahain", getName() + " - " + String.valueOf(this));
+        if ( next != null )
+            next.printChain();
+    }
+
+    private String name;
+
+    public void setName(String n){
+        this.name = n;
+    }
+    public String getName(){
+        return name;
+    }
 }

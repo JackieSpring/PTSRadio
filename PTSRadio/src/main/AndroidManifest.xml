@@ -18,17 +18,10 @@ Questi contenuti dovranno essere aggiunti nei rispettivi file:
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
                 ...
             </intent-filter>
-            <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" android:resource="@xml/device_filter" />
 
         </activity>
     </application>
 </manifest>
-
-#### ./res/xml/device_filter.xml ####
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <usb-device vendor-id="6790" product-id="29987" class="255" subclass="0" protocol="0" />
-</resources>
 
 -->
 </manifest>

@@ -6,6 +6,33 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+// TODO: Il parsing è buggato a causa di inconsistenze del protocollo della scheda, Ho applicato dei workaround che DEVONO essere rimossi
+/*
+____PACKET________________SRC__DST__PAYLOAD
+    ACTION_UNKNOWN                  [fullPacket]
+    ACTION_DEBUG                    [message]
+    ACTION_MESSAGE          S,      [message]
+
+    ACTION_REQUEST_CHAT     S, D
+    ACTION_REQUEST_GROUP    S, D,   [host]
+    ACTION_REQUEST_CALL     S, D,   [channel]
+
+    ACTION_SERVICE_YES      S, D
+    ACTION_SERVICE_NO       S, D
+    ACTION_SERVICE_ADD      S, D
+    ACTION_SERVICE_KICK     S, D
+    ACTION_SERVICE_QUIT     S
+    ACTION_SERVICE_TIMEOUT
+
+    ACTION_SESSION_PING     S
+    ACTION_SESSION_ID               [id]
+
+    ACTION_PTT_GO
+    ACTION_PTT_STOP
+
+    ACTION_CHANNEL_OK               [channel]
+    ACTION_CHANNEL_KO               [channel]
+* */
 
 public class PTSPacket {
 /*
@@ -43,12 +70,6 @@ public class PTSPacket {
     ACTION_CHANNEL_OK = "Y",
     ACTION_CHANNEL_KO = "N";
 
-    public static final int
-    PACKET_DEST = 0,
-    PACKET_CHANNEL = 0,
-    PACKET_MESSAGE = 0,
-    PACKET_SRC = 0,
-    PACKET_EXTRA = 2;
 
     private String action;
     private String source;
@@ -128,77 +149,112 @@ public class PTSPacket {
         PTSPacket pk = null;
         String action = "";
         String source = "";
+        int stringpklen;
 
-        if ( pklen > 5 ) {
+        if ( stringpkt.lastIndexOf("\r\n") == (stringpkt.length() - 2) )
+            stringpkt = stringpkt.substring(0, stringpkt.lastIndexOf("\r\n") ); //stringpkt.replace("\r\n", "");
+
+        stringpklen = stringpkt.length();
+
+        // TODO
+        if ( stringpklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_DEBUG) ) {
+
+            // TODO: Rimuovere questo WorkAround non appena il protocollo verrà aggiustato
+
+            String REQUEST_RESPONSE_DEBUG = "messaggio destinato a noi    \r\n";
+            String REQUEST_DEBUG = "richiesta chat  ";
+            int debugIndex;
+            int startIndex;
+            int endIndex;
+
+            debugIndex = stringpkt.indexOf(REQUEST_RESPONSE_DEBUG);
+            if ( debugIndex != -1 ) {
+                startIndex = debugIndex + REQUEST_RESPONSE_DEBUG.length();
+                endIndex = stringpkt.indexOf("\r\n", startIndex);
+                stringpkt = stringpkt.substring(startIndex, endIndex);
+                stringpklen = stringpkt.length();
+            }
+
+            debugIndex = stringpkt.indexOf(REQUEST_DEBUG);
+            if ( debugIndex != -1 ) {
+                stringpkt = stringpkt.substring(23, 34);
+                stringpklen = stringpkt.length();
+            }
+
+        }// TODO
+
+        if ( stringpklen > 5 ) {
             action = String.valueOf(stringpkt.charAt(5));
             source = stringpkt.substring(0, 5);
         }
+
 // Check constant packets, then packet length, then action command
+
         // DEBUG packet
-        if ( pklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_DEBUG) ) {
+        if ( stringpklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_DEBUG) ) {
             pk = new PTSPacket(PTSPacket.ACTION_DEBUG, null, null, pklen);
             pk.addPayloadElement( stringpkt.substring(6) );
 
-        }// REQUEST_TIMEOUT packet
-        else if ( pklen == 15 && stringpkt.substring( 0, 15 ).equals( PTSPacket.ACTION_SERVICE_TIMEOUT ) )
+        }
+        // REQUEST_TIMEOUT packet
+        else if ( stringpklen >= 15 && stringpkt.substring( 0, 15 ).equals( PTSPacket.ACTION_SERVICE_TIMEOUT ) )
             pk = new PTSPacket( PTSPacket.ACTION_SERVICE_TIMEOUT, null, null, pklen );
 
-        else if (pklen == 4) {
+        else if (stringpklen == 4) {
             if (stringpkt.equals(PTSPacket.ACTION_PTT_GO))
                 pk = new PTSPacket(PTSPacket.ACTION_PTT_GO, null, null, pklen);
+
             else if (stringpkt.equals(PTSPacket.ACTION_PTT_STOP))
                 pk = new PTSPacket(PTSPacket.ACTION_PTT_STOP, null, null, pklen);
+
             else if (stringpkt.substring(0, 1).equals(PTSPacket.ACTION_CHANNEL_OK)) {
                 pk = new PTSPacket(PTSPacket.ACTION_CHANNEL_OK, null, null, pklen);
                 pk.addPayloadElement(stringpkt.substring(1));
-            } else if (stringpkt.substring(0, 1).equals(PTSPacket.ACTION_CHANNEL_KO)) {
+            }
+            else if (stringpkt.substring(0, 1).equals(PTSPacket.ACTION_CHANNEL_KO)) {
                 pk = new PTSPacket(PTSPacket.ACTION_CHANNEL_KO, null, null, pklen);
                 pk.addPayloadElement(stringpkt.substring(1));
             }
         }
-        else if (pklen == 5){
+        else if (stringpklen == 5){
             pk = new PTSPacket(PTSPacket.ACTION_SESSION_ID, null, null, pklen);
             pk.addPayloadElement( stringpkt );
         }
         else{
             String dest = null;
 
-            if ( pklen >= 11 )
+            if ( stringpklen >= 11 )
                 dest = stringpkt.substring(6, 11);
 
             switch( action ){
             // requests
-                case PTSPacket.ACTION_REQUEST_CHAT:
-                    if ( pklen == 6 )
-                        pk = new PTSPacket( action, source, dest, pklen );
-                    break;
                 case PTSPacket.ACTION_REQUEST_CALL:
-                    if ( pklen == 14 ) {
+                    if ( stringpklen == 14 ) {
                         String cnl = stringpkt.substring(11);
                         pk = new PTSPacket( action, source, dest, pklen );
                         pk.addPayloadElement(cnl);
                     }
                     break;
                 case PTSPacket.ACTION_REQUEST_GROUP:
-                    if ( pklen == 16 ) {
+                    if ( stringpklen == 16 ) {
                         String host= stringpkt.substring(11);
                         pk = new PTSPacket( action, source, dest, pklen );
                         pk.addPayloadElement(host);
                     }
                     break;
             // service control
+                case PTSPacket.ACTION_REQUEST_CHAT:
                 case PTSPacket.ACTION_SERVICE_YES :
                 case PTSPacket.ACTION_SERVICE_NO:
                 case PTSPacket.ACTION_SERVICE_ADD:
                 case PTSPacket.ACTION_SERVICE_KICK:
-                    if ( pklen != 11 ) break;
-                    dest = stringpkt.substring(6, 11);
+                    if ( stringpklen != 11 ) break;
 
                     pk = new PTSPacket( action, source, dest, pklen );
                     break;
                 case PTSPacket.ACTION_SERVICE_QUIT:
                 case PTSPacket.ACTION_SESSION_PING:
-                    if ( pklen != 6 ) break;
+                    //TODO: Inserire questo controllo non appena la scheda vieve aggiustata -> if ( stringpklen != 6 ) break;
                     pk = new PTSPacket( action, source, null, pklen );
                     break;
             // message

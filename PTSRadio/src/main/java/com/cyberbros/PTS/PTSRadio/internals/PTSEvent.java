@@ -12,6 +12,11 @@ public class PTSEvent {
         payload = new ArrayList<Object>();
     }
 
+    public PTSEvent ( String newAction, PTSEvent oldEv ) {
+        action = newAction;
+        payload = new ArrayList<Object>( oldEv.payload );
+    }
+
     public String getAction(){
         return this.action;
     }

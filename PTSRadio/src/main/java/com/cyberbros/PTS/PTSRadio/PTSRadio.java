@@ -14,20 +14,22 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.cyberbros.PTS.PTSRadio.exception.PTSException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRadioException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRadioIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
+import com.cyberbros.PTS.PTSRadio.service.BoardTextMode;
+import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 /*
+--- EVENTS ---
     CONNECTED                   usb connesso e permessi concessi, l'ID della scheda è stato recuperato e tutto è pronto
     DISCONNECTED                usb è stato disconnesso, non è possibile utilizzare alcun servizio
     USER_ONLINE                 un utente è apparso nel ping per la prima volta
@@ -38,34 +40,58 @@ import java.util.HashMap;
     MISSING_AUDIO_PERMISSION    permessi sui dispositivi audio non concessi dall'utente
     ERROR_USB                   durante un'operazione sulla usb è statio provocato un error
     ERROR_AUDIO                 durante un'operazione sui dispositivi audio e stato provocato un errore
+    REQUEST_CHAT                è arrivata una richiesta di apertura sessione chat
+    REQUEST_GROUP               è arrivata una richiesta di apertura sessione gruppo
+    REQUEST_CALL                è arrivata una richiesta di apertura sessione chiamata
 
-    --- HOWTO ---
+--- METHODS ---
+    start()
+    close()
+    startService( PTSService )
+    getRadioID()
+    setRadioListener( PTSListener )
+
+--- HOWTO ---
     PTSRadio radio = new PTSRadio(this);
-    radio.setRadioListener( new PTSCallback(){...} );
-    radio.start();
+    radio.setRadioListener( new PTSListener(){...} );
+    if ( radio.start() == false )
+        notifyNoDevice();
 
-    --- WHAT ---
+--- WHAT ---
     .start() -> ( cerca usbdevice ) -> .initRadio(UsbDevice) -> (radio aperta?, richiedi permessi) -> onUsbPermission() -> (crea serialio, init audio, init packetfilter, apre Radio)
     .onUsbAttached -> .initRadio(UsbDevice)
+
  */
 
 public class PTSRadio {
 
     private static int DEBUG = 0;
 
-    private static final String USB_PERMISSION = "com.cyberbros.PTS.PTSRadio.USB_PERMISSION";
+    private static final String USB_PERMISSION = "com.android.example.USB_PERMISSION";
+    private static final int USB_REQUEST_CODE = 0xdeadc0de;
 
+    // EVENTS
     public static final String
-    CONNECTED = "connected",
-    DISCONNECTED = "disconnected",
-    USER_ONLINE = "user_online",
-    USER_OFFLINE = "user_offline",
-    AUDIO_ATTACHED = "audio_attached",
-    AUDIO_DETACHED = "audio_detached",
-    MISSING_USB_PERMISSION = "missing_usb_permission",
-    MISSING_AUDIO_PERMISSION = "missing_audio_permission",
-    ERROR_USB = "error_usb",
-    ERROR_AUDIO = "error_audio";
+    CONNECTED                   = "connected",
+    DISCONNECTED                = "disconnected",
+    USER_ONLINE                 = "user_online",
+    USER_OFFLINE                = "user_offline",
+    AUDIO_ATTACHED              = "audio_attached",
+    AUDIO_DETACHED              = "audio_detached",
+    MISSING_USB_PERMISSION      = "missing_usb_permission",
+    MISSING_AUDIO_PERMISSION    = "missing_audio_permission",
+    ERROR_USB                   = "error_usb",
+    ERROR_AUDIO                 = "error_audio",
+    REQUEST_CHAT                = "request_chat",
+    REQUEST_GROUP               = "request_group",
+    REQUEST_CALL                = "request_call";
+
+    // BOARD COMMANDS
+    private static final String
+    BOARD_MODE_TEXT     = "T",
+    BOARD_MODE_AUDIO    = "A",
+    BOARD_RESTART       = "R",
+    BOARD_GET_ID        = "I";
 
     private final Activity activity;
     private final Resources resources;
@@ -83,9 +109,7 @@ public class PTSRadio {
     private boolean flagUsbConnected    = false;
 
     private PTSListener callback;
-    // TODO traplinkedlist
     private PTSPacketTrap trapchain;
-    // TODO
     private PTSSerial.PTSSerialCallback serialreader = new PTSSerial.PTSSerialCallback() {
         @Override
         public void dataRecived(byte[] data) {
@@ -142,6 +166,9 @@ public class PTSRadio {
         activity.registerReceiver(usbreciver, filter);
     }
 
+// #####################################################
+//                  GETTERS / SETTERS
+// #####################################################
 
     public String getRadioID() {
         return ID;
@@ -152,8 +179,12 @@ public class PTSRadio {
     }
 
 
+// #####################################################
+//              PRIVATE UTILITY METHODS
+// #####################################################
     private void send( String msg ){
-        send( msg.getBytes(StandardCharsets.UTF_8) );
+        if( serialio != null && serialio.isOpen() )
+            serialio.write(msg);
     }
     private void send( byte [] data ){
         if( serialio != null && serialio.isOpen() )
@@ -175,9 +206,9 @@ public class PTSRadio {
 // #####################################################
 //                  INIT / FINI RADIO
 // #####################################################
-    public boolean start() throws PTSRadioException {
+    public boolean start() throws PTSRadioIllegalStateException {
         if ( flagIsOpen )
-            throw new PTSRadioException( "Radio already started" );
+            throw new PTSRadioIllegalStateException( "Radio already started" );
 
         return initRadio( findDevice() );
     }
@@ -195,6 +226,7 @@ public class PTSRadio {
     private synchronized boolean initRadio( UsbDevice device ) {
         if ( device == null )
             return false;
+        Log.e("initRadio", "called");
 /*
         if ( flagUsbRequestSent ) {
             try {
@@ -205,7 +237,7 @@ public class PTSRadio {
         }
 */
         if ( ! usbman.hasPermission(device) ){
-            PendingIntent usbpermissionintent = PendingIntent.getBroadcast(activity, 0, new Intent(USB_PERMISSION), PendingIntent.FLAG_MUTABLE);
+            PendingIntent usbpermissionintent = PendingIntent.getBroadcast(activity, USB_REQUEST_CODE, new Intent(USB_PERMISSION), PendingIntent.FLAG_MUTABLE);
             usbman.requestPermission(device, usbpermissionintent);
             flagUsbRequestSent = true;
         }
@@ -220,10 +252,11 @@ public class PTSRadio {
 // #####################################################
 
     private synchronized void onUsbDetached( UsbDevice device ){
+
         if ( ! flagUsbConnected )
             return;
 
-        if ( device.equals(serialio.getDevice()) )
+        if ( ! device.equals(serialio.getDevice()) )
             return;
 
         serialio.close();
@@ -232,14 +265,13 @@ public class PTSRadio {
         flagUsbConnected = false;
 
         // TODO destroy packetfilter
-        Log.e("TODO", "onUsbDetached: clear packetfilters");
+        Log.e("onUsbDetached", "TODO: onUsbDetached: clear packetfilters");
         emit( new PTSEvent( DISCONNECTED ) );
     }
 
-    private void onUsbAttached( UsbDevice device ){
+    private synchronized void onUsbAttached( UsbDevice device ){
         if ( flagUsbConnected )
             return;
-
         initRadio(device);
     }
 
@@ -250,7 +282,7 @@ public class PTSRadio {
             serialio.setReadListener( serialreader );
             initTrapChain();
             // TODO create ID filter
-            Log.e("TODO", "onUsbPermission: create ID filter " + DEBUG + " " + device.getDeviceName());
+            Log.e("onUsbPermission", "TODO: create ID filter " + DEBUG + " " + device.getDeviceName());
             DEBUG++;
             flagIsOpen = true;
             flagUsbRequestSent = false;
@@ -267,6 +299,8 @@ public class PTSRadio {
 // #####################################################
 
     private UsbDevice findDevice(){
+        // TODO: A volte confonde i device e si connette al device sbagliato
+        Log.e("findDevice", "TODO: migliorare filtro device");
         HashMap<String, UsbDevice> devlist = usbman.getDeviceList();
         for (UsbDevice dev : devlist.values() )
             if ( PTSConstants.USB_VENDOR_ID == dev.getVendorId() &&
@@ -279,50 +313,62 @@ public class PTSRadio {
     }
 
 // #####################################################
-//                  USB METHODS
+//                  PACKET TRAP INIT
 // #####################################################
-    public void initTrapChain(){
+    private void initTrapChain(){
         // STARTUP RESET BUTTON PRESS & TEXT MODE
 
-        // bootTrap -> initTrap -> textModeTrap
+        // send(R) -> [ bootTrap, send(T) ] -> [ initTrap, send(I) ] -> [ textModeTrap ]
 
         PTSPacketTrap gatewayTrap;
-        final PTSPacketTrap bootTrap;
-        final PTSPacketTrap initTrap;
-        PTSPacketTrap textModeTrap;
+        PTSPacketTrap bootTrap;
+        PTSPacketTrap initTrap;
+        BoardTextMode textModeTrap;
 
         // Empty trap, used only as head of the chain
         gatewayTrap = new PTSPacketTrap() {
             @Override
             public boolean trap(PTSPacket pk) {
-                return false;
+                Log.d("initTrapChain", "printChain");printChain();return false;
             }
         };
 
-        textModeTrap = new PTSPacketTrap() {
-            @Override
-            public boolean trap(PTSPacket pk) {
-                // TODO TextMode trap
-                Log.e("TODO", "initTrapChain: create main TextMode trap");
-                return false;
-            }
-        };
+        textModeTrap = new BoardTextMode();
+        textModeTrap.setListener( (PTSEvent event ) -> {
+                String action = event.getAction();
+                PTSEvent outEv;
+                switch(action){
+                    case BoardTextMode.BOARD_REQUEST_CHAT:
+                        outEv = new PTSEvent(REQUEST_CHAT, event);
+                        emit(outEv);
+                        break;
+                    case BoardTextMode.BOARD_REQUEST_GROUP:
+                        // TODO Handle group request
+                        Log.e("initTrapChain", "TODO: Handle group request");
+                        break;
+                    case BoardTextMode.BOARD_REQUEST_CALL:
+                        // TODO Handle call request
+                        Log.e("initTrapChain", "TODO: Handle call request");
+                        break;
+                }
+        } );
 
         initTrap = new PTSPacketTrap() {
             @Override
             public boolean trap(PTSPacket pk) {
-                Log.d("PACKET", String.valueOf(pk));
+                //Log.d("initTrap", String.valueOf(pk));
                 String action = pk.getAction();
 
                 if ( action.equals( PTSPacket.ACTION_SESSION_ID ) ) {
                     ID = (String) pk.getPayloadElement(0);
+                    textModeTrap.startService(serialio, ID);
+
+                    this.addNext( textModeTrap );
+                    this.destroy();
 
                     PTSEvent eventConnected = new PTSEvent( PTSRadio.CONNECTED );
                     eventConnected.addPayloadElement( ID );
                     PTSRadio.this.emit( eventConnected );
-
-                    this.addNext( textModeTrap );
-                    this.destroy();
                     return true;
                 }
                 return false;
@@ -333,16 +379,22 @@ public class PTSRadio {
             @Override
             public boolean trap(PTSPacket pk) {
                 String action = pk.getAction();
-
+                //Log.d("bootTrap", String.valueOf(pk));
+                // STAGE 1: Recive reset confirm, then
                 if ( action.equals( PTSPacket.ACTION_DEBUG ) && pk.getPayloadLength() == 1 ) {
-                    String msg = (String) pk.getPayloadElement(0);
-                    if (msg.length() >= 30 && msg.substring(1, 30).equals("Serial check up STATUS ... OK"))
-                        PTSRadio.this.send("T");
-                }
 
-                this.addNext( initTrap );
-                this.destroy();
-                PTSRadio.this.send( "I" );
+                    String msg = (String) pk.getPayloadElement(0);
+
+                    if ( msg.length() >= 30 && msg.substring(1, 30).equals("Serial check up STATUS ... OK")) {
+                        PTSRadio.this.send(PTSRadio.BOARD_MODE_TEXT);
+                        return true;
+                    } else if ( msg.length() >= 5 && msg.substring(1, 5).equals("text") ){
+                        this.addNext( initTrap );
+                        this.destroy();
+                        PTSRadio.this.send( PTSRadio.BOARD_GET_ID );
+                        return true;
+                    }
+                }
 
                 return false;
             }
@@ -350,12 +402,22 @@ public class PTSRadio {
 
 
         trapchain = gatewayTrap;
+        trapchain.setName("GatewayTrap");
         trapchain.addNext(bootTrap);
+        this.send( BOARD_RESTART );
     }
 
-    // TODO DEBUG
-    public void parsingTest(String msg){
-        Log.e( "PACKET", String.valueOf(PTSPacket.parsePacket(msg)));
+// #####################################################
+//                  SERVICE API
+// #####################################################
+    public void startService (PTSService serv){
+        if ( serv == null || ! flagIsOpen )
+            return;
+        serv.startService(serialio, ID);
+        trapchain.addNext(serv);
     }
+
+
+
 
 }

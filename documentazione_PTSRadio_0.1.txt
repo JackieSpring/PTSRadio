@@ -1,0 +1,372 @@
+
+DOC VERSION: 0.1
+
+ INDICE 
+----------------------------------
+
+- Installazione
+- Utilizzo
+- Classi
+- Limitazioni
+- Referenze
+
+
+ INSTALLAZIONE
+----------------------------------
+Si possono scaricare due versioni: la versione principale e la versione di sviluppo,
+mentre la versione principale è piu stabile, quella di sviluppo è aggiornata con nuove
+funzionalità ma potrebbe essere meno robusta.
+
+=== Come Installare ===
+Per l'installazione è anche possibile consultare il sito della repository: 
+https://jitpack.io/#JackieSpring/PTSRadio
+
+Prima di tutto sarà necessario modificare due file gradle del progetto
+
+> File: build.gradle (app)
+dependencies {
+    // Decommenta questa riga per la versione principale
+    //implementation 'com.github.JackieSpring:PTSRadio:master-SNAPSHOT'
+
+    // Decommenta questa riga per la versione pdi sviluppo
+    //implementation 'com.github.JackieSpring:PTSRadio:development-SNAPSHOT'
+}
+
+
+
+
+> File: settings.gradle
+dependencyResolutionManagement {
+    ...
+    repositories {
+        ...
+        maven {
+            url "https://jitpack.io"
+        }
+    }
+}
+
+
+
+Per operare, PTSRadio necessita di permessi speciali che vengono concessi
+dal file Manifest.xml
+
+> File: manifests/AndroidManifest.xml
+<manifest>
+    ...
+    <uses-permission android:name="android.permission.RECORD_AUDIO"></uses-permission>
+    ...
+    <application>
+        ...
+        <activity>
+            ...
+            <intent-filter>
+                ...
+                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+                ...
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>
+
+
+
+
+ UTILIZZO
+----------------------------------
+
+=== INSTANZIARE PTSRadio ===
+Si incomincia instanziando e inizializzando PTSRadio, questo oggetto permette di controllare
+la scheda durante il suo ciclo di vita, il suo contruttore è:
+
+	PTSRadio( Activity )
+
+PTSRadio comunicherà attraverso l'emissione di eventi PTSEvent, dunque per prima cosa, si crea
+un PTSListener che rimarrà in attesa di questi eventi:
+
+	public PTSListener radioListener = new PTSListener() {
+		@Override
+		public void handle( PTSEvent event ) {
+			String action = event.getAction();
+			if ( action.equals( PTSRadio.CONNECTED ) ) {
+				// Radio avviata con successo
+				// Continua con l'esecuzione
+			}
+			else if ( action.equals( PTSRadio.DISCONNECTED ) ) {
+				// Radio disconnessa, funzionità non piu accessibili
+				// Notifica disconnessione
+			}
+			else if ( action.equals( PTSRadio.ERROR_USB) ) {
+				// Errore durante procedure di inizializzazione USB
+				Exception ex = (Exception) event.getPayloadElement(0);
+				// Notifica eccezione
+			}
+			else if ( action.equals( PTSRadio.REQUEST_CHAT ) ){
+				// Ricevuta richiesta chat
+				PTSChat chat = (PTSChat) event.getPayloadElement(0);
+				// Gestisci chat
+			}
+			// Esistono altri eventi gestibili, lista completa nella sezione "Classi"
+		}
+	}
+
+L'evento CONNECTED segnala che la Radio è stata avviata con successo e tutte le funzionalità saranno 
+accessibili; per poter rendere attivo il listener è necessario inizializzare PTSRadio
+
+	PTSRadio radio = new PTSRadio(this);
+	radio.setRadioListener( radioListener );
+	if ( radio.start() == false )
+		// Device USB assente o no trovato
+	else
+		// Continua esecuzione
+
+Alla chiamata di .start(), PTSRadio apre la comunicazione con la scheda, da questo momento il listener
+registrato può ricevere eventi. Non appena si termina l'utilizzo della radio, è necessario chiuderla
+con il metodo .close()
+
+	radio.close();
+
+Per utilizzarlo nuovamente, bisognerà richiamare .start()
+
+
+===  AVVIARE UNA CHAT ===
+Il servizio di chat si controlla attarverso un'istanza di PTSChat, come radio, anche PTSChat lancia
+eventi e sarà necessario un listener per poterla rendere reattiva. Il suo costruttore è:
+
+	PTSChat ( String chatMember )
+
+Creiamo il listener:
+	
+	public PTSListener chatListener = new PTSListener() {
+		@Override
+		public void handle( PTSEvent event ) {
+			String action = event.getAction();
+			switch(action){
+				case PTSChat.CHAT_ACCEPTED :
+					// Chat avviata con successo
+					// è possibile utilizzare la chat 
+				case PTSChat.CHAT_REFUSED :
+					// Richiesta rifiutata	
+				case PTSChat.CHAT_MESSAGE :
+					String msg = (String) event.getPayloadElement(0);
+					// Gestisci messaggio
+				case PTSChat.CHAT_CLOSED :
+					// Gestisci chiusura chat
+			}
+		}
+	}
+
+Una chat può essere perta in due modi: o inviando una richiesta di apertura chat, o accettando quando se
+ne riceve una.
+
+> Inviare una richiesta
+
+	PTSChat chat = new PTSChat("12345"); // L'ID dell'utente a cui inviare la richiesta
+	chat.setListener( chatListener );
+	radio.startService(chat);
+
+
+
+L'arrivo di una richiesta viene notificato come evento di PTSRadio, perciò deve essere gestito nel 
+radioListener
+
+> Ricevere una richiesta
+
+	public PTSListener radioListener = new PTSListener() {
+		@Override
+		public void handle( PTSEvent event ) {
+			...
+			if ( action.equals(PTSRadio.REQUEST_CHAT) ) {
+				PTSChat chat = (PTSChat) event.getPayloadElement(0);
+				chat.setListener( chatListener );
+				chat.accept();
+				// usare: chat.refuse() per RIFIUTARE
+				// Gestisci la chat
+			}
+		}
+	}
+
+=== USARE LA CHAT ===
+
+> Inviare messaggi
+	...
+	chat.send( "Messaggio" );
+	...
+
+> Ricevere messaggi
+	
+	public PTSListener chatListener = new PTSListener() {
+		@Override
+		public void handle( PTSEvent event ) {
+			...
+			if ( action.equals( PTSChat.CHAT_MESSAGE ) ){
+				// Il messaggio è sempre il primo elemento del payload
+				String message = (String) event.getPayloadElement(0);
+				// Gestisci messaggio
+			}
+		}
+	}
+
+> Uscire dalla chat
+	...
+	chat.quit()
+
+
+> Utilità
+	...
+	boolean open = chat.isOpen();		// controlla che la chat sia attiva
+	String myID  = chat.getID();		// recupera l'Id della radio
+	String memberID = chat.getMemberID()	// recupera l'Id del membro della chat
+
+
+ CLASSI
+----------------------------------
+- PTSRadio
+- PTSChat
+- PTSEvent
+- PTSListener
+
+_________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSRadio oooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+--- Costruttori ---
+
+	public PTSRadio(Activity)
+
+--- Eventi -------------------- DESCRIZIONE --------------------------- PAYLOAD -----------------
+    CONNECTED                   usb connesso e permessi concessi, 
+				l'ID della scheda è stato recuperato 
+				e tutto è pronto
+    DISCONNECTED                usb è stato disconnesso, non è 
+				possibile utilizzare alcun servizio
+    USER_ONLINE                 un utente è apparso nel ping per la	[ (String) user ]
+				prima volta
+    USER_OFFLINE                un utente ha smesso di inviare ping	[ (String) user ]
+    AUDIO_ATTACHED              è stato attaccato il dispositivo audio
+    AUDIO_DETACHED              è stato rimosso il dispositivo audio
+    MISSING_USB_PERMISSION      permessi sulla usb non concessi
+    MISSING_AUDIO_PERMISSION    permessi sui dispositivi audio non 
+				concessi dall'utente
+    ERROR_USB                   durante un'operazione sulla usb è 	[ (Excpetion) eccezione ]
+				stato provocato un errore
+    ERROR_AUDIO                 durante un'operazione sui dispositivi 	[ (Excpetion) eccezione ]
+				audio e stato provocato un errore
+    REQUEST_CHAT                è arrivata una richiesta di apertura 	[ (PTSChat) chat ]
+				sessione chat
+    REQUEST_GROUP               è arrivata una richiesta di apertura 	[ (PTSGroup) group ]
+				sessione gruppo
+    REQUEST_CALL                è arrivata una richiesta di apertura 	[ (PTSCall) call ]
+				sessione chiamata
+
+--- Metodi -------------------------------------------- DESCRIZIONE ----------------------------
+	public void close()				Chiude la scheda radio
+	public String getRadioID()			Ritorna l'id della scheda radio
+	public void setRadioListener( PTSListener )	Imposta il listener per eventi radio
+	public boolean start() 				Avvia la scheda radio, ritorna false 
+							se non è stato trovato nessun
+							dispositivo usb compatibile, se la radio
+							no puo essere o è gia stata avviata, 
+							lancia PTSRadioIllegalStateException
+	public void startService (PTSService )		Avvia un servizio
+
+_________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSChat ooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+--- Costruttori ---
+
+	public PTSChat(String memeberId)
+
+--- Eventi -------------------- DESCRIZIONE --------------------------- PAYLOAD -----------------
+    CHAT_ERROR              	Errore generico durante una procedura	[ (Exception) eccezione ]
+    CHAT_ACCEPTED           	Sessione chat aperta e pronta per 
+				comunicare
+    CHAT_REFUSED            	Richiesta di inizio chat inviata, 
+				richiesta rifiutata dal chatMember
+    CHAT_REQUEST_TIMEOUT    	Richiesta di inizio chat inviata, ma 
+				non si è ottenuta risposta
+    CHAT_MESSAGE            	Sessione chat attiva ha ricevuto un 	[ (Srting) messaggio ]
+				messaggio dal client
+    CHAT_CLOSED             	Sessione chat terminata
+
+
+--- Metodi ---------------------------- DESCRIZIONE --------------------------------------------
+    public void accept()		accetta la richiesta di chat in arrivo, lancia 
+					PTSChatIllegalStateException se la chat non può essere
+					aperta o è gia stata aperta
+    public boolean isOpen()		ritorna true se la chat è stata aperta con successo
+    public String getID()		ritorna l'Id della scheda su cui è attiva questa
+					sessione chat
+    public String getMemberID()		ritorna l'Id della scheda con cui si vuole aprire / si è
+					aperta una chat
+    public void quit()			Esce da unsa sessione di chat aperta
+    public void refuse()		rifiuta la richiesta di chat in arrivo, lancia
+					PTSChatIllegalStateException se la chat è aperta oppure è
+					gia stata chiusa
+    public void send(String msg)	Invia un messaggio sulla sessione di chat
+
+
+_________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSEvent oooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+--- Costruttori ---
+	
+	public PtsEvent(String action)
+	public PTSEvent(String newAction, PTSEvent oldEvent)
+
+--- Metodi -------------------------------------------- DESCRIZIONE -----------------------------
+    public String getAction()				ritorna la stringa rappresentate l'evento
+    public Object getPayloadElement( int index )	recupera dal payload l'elemento salvato
+							all'indice specificato, o null se assente
+    public void addPayloadElement( Object elem )	aggiunge un elemento al payload
+    public int getPayloadLength()			ritorna il numero di elementi nel payload
+
+
+_________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSListener ooooooooooooooooooooooooooooooooooooooooooooooooooooo
+--- Costruttori ---
+
+	è un'interfaccia
+
+--- Metodi ------------------------------------ DESCRIZIONE -------------------------------------
+    public void handle( PTSEvent event )	Gestisce indipendentemente il PTSEvent emesso
+
+
+_________________________________________________________________________________________________
+_________________________________________________________________________________________________
+
+
+
+ LIMITAZIONI
+----------------------------------
+*	Anche se PTSRadio lo permette, la schead non è in grado di gestire più di un servizio alla 
+	volta, dunque non si possono utilizzare piu chat allo stesso tempo
+
+*	PTSRadio no emette gli eventi:		
+    		USER_ONLINE
+    		USER_OFFLINE
+    		AUDIO_ATTACHED
+    		AUDIO_DETACHED
+    		MISSING_AUDIO_PERMISSION
+		ERROR_AUDIO
+		REQUEST_GROUP
+		REQUEST_CALL
+
+*	Chiamate e gruppi non sono stati implementati
+
+*	La modalità audio non è ancora stata implementata
+
+*	Talvolta PTSRadio si confonde connettendosi al device sbagliato, sarà sufficiente staccare
+	e riattaccare la scheda per tornare in funzione
+
+*	Al momento la chat non può inviare messaggi piu lunghi di 26 byte, nel futuro si risolverà
+
+
+ REFERENZE
+----------------------------------
+- https://jitpack.io/#JackieSpring/PTSRadio/master-SNAPSHOT
+- https://jitpack.io/#JackieSpring/PTSRadio/development-SNAPSHOT
+- https://github.com/JackieSpring/PTSRadio
+- chiamatemi
+
