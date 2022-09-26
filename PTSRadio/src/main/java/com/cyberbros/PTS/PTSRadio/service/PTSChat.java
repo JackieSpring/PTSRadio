@@ -9,6 +9,7 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
+import com.cyberbros.PTS.PTSRadio.io.PTSMessageBuilder;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
@@ -74,6 +75,7 @@ public class PTSChat extends PTSService {
     SERVICE_REQUEST_CHAT = "C";
 
     private String chatMember;
+    private PTSMessageBuilder mb;
     private boolean flagChatOpen = false;
     private boolean flagChatClosed = false;
     private boolean flagSemaphore = false;
@@ -83,6 +85,7 @@ public class PTSChat extends PTSService {
     public PTSChat( String target ){
         super();
         chatMember = target;
+        mb = new PTSMessageBuilder();
     }
 
 
@@ -128,6 +131,7 @@ public class PTSChat extends PTSService {
     public void send(String msg){
         //TODO Message handling
         Log.e("PTSChat", "TODO: send message");
+        Log.d("PTSChat", "SENDING: " + selfID + SERVICE_MESSAGE + msg);
         serialio.write(selfID + SERVICE_MESSAGE + msg);
     }
 
@@ -159,14 +163,21 @@ public class PTSChat extends PTSService {
             if (flagChatOpen) {
                 try {
                     if (PTSPacket.ACTION_MESSAGE.equals(action) && member.equals(chatMember) ) {
-                        //TODO handle message and message protocol
-                        Log.e("PTSChat", "TODO: handle message");
-                        PTSEvent ev = new PTSEvent( CHAT_MESSAGE );
+                        //String msg = mb.pktToMsg( (String)pk.getPayloadElement(0), this.chatMember );
+                        /*if ( msg != null ) {
+                            //TODO handle message and message protocol
+                            Log.e("PTSChat", "TODO: handle message");
+                            PTSEvent ev = new PTSEvent(CHAT_MESSAGE);
+                            ev.addPayloadElement( msg );
+                            emit(ev);
+                        }*/
+                        PTSEvent ev = new PTSEvent(CHAT_MESSAGE);
                         ev.addPayloadElement( pk.getPayloadElement(0) );
-                        emit( ev );
+                        emit(ev);
                         isHandled = true;
                     } else if (PTSPacket.ACTION_SERVICE_QUIT.equals(action) && member.equals(chatMember)) {
                         onQuit();
+                        emit( new PTSEvent(CHAT_CLOSED) );
                         isHandled = true;
                     }
                 }

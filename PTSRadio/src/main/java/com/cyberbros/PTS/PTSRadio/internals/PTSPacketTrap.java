@@ -52,7 +52,6 @@ public abstract class PTSPacketTrap {
 
     // TODO: DEBUG
     public void printChain(){
-        Log.d("printCahain", getName() + " - " + String.valueOf(this));
         if ( next != null )
             next.printChain();
     }
