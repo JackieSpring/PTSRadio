@@ -329,7 +329,9 @@ public class PTSRadio {
         gatewayTrap = new PTSPacketTrap() {
             @Override
             public boolean trap(PTSPacket pk) {
-                Log.d("initTrapChain", "printChain");printChain();return false;
+                Log.d("initTrapChain", "printChain");
+                printChain();
+                return false;
             }
         };
 
@@ -402,7 +404,6 @@ public class PTSRadio {
 
 
         trapchain = gatewayTrap;
-        trapchain.setName("GatewayTrap");
         trapchain.addNext(bootTrap);
         this.send( BOARD_RESTART );
     }

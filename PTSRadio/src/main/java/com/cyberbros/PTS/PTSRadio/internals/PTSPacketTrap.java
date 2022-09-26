@@ -52,16 +52,8 @@ public abstract class PTSPacketTrap {
 
     // TODO: DEBUG
     public void printChain(){
+        Log.d("printChain", String.valueOf(this));
         if ( next != null )
             next.printChain();
-    }
-
-    private String name;
-
-    public void setName(String n){
-        this.name = n;
-    }
-    public String getName(){
-        return name;
     }
 }

@@ -50,17 +50,17 @@ public class PTSSerial {
         isopen = true;
     }
 
-    public void write(String msg){
+    public synchronized void write(String msg){
         this.write(msg.getBytes(StandardCharsets.UTF_8));
     }
-    public void write(byte [] arr){
+    public synchronized void write(byte [] arr){
         serial.write(arr);
     }
-    public void close(){
+    public synchronized void close(){
         if ( isopen == false )
             return;
 
-        serial.close();
+        serial.syncClose();
         isopen = false;
         readcallback = null;
     }

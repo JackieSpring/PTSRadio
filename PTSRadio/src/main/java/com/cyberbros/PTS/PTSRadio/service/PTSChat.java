@@ -216,7 +216,7 @@ public class PTSChat extends PTSService {
 //#############################################################
 //                  Chat Event Handlers
 //#############################################################
-    protected void onTimeout()  throws PTSChatIllegalStateException {
+    protected synchronized void onTimeout()  throws PTSChatIllegalStateException {
         synchronized (this) {
             try {
                 if ( flagSemaphore )
@@ -237,15 +237,18 @@ public class PTSChat extends PTSService {
         }
     }
 
-    protected void onRequestAccepted() throws PTSChatIllegalStateException {
+    protected synchronized void onRequestAccepted() throws PTSChatIllegalStateException {
         synchronized (this){
             try {
                 if ( flagSemaphore )
                     wait();
                 flagSemaphore = true;
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  )
+                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ){
+                    flagSemaphore = false;
+                    notify();
                     throw new PTSChatIllegalStateException("Cannot accept request");
+                }
                 flagChatOpen = true;
                 emit( new PTSEvent( CHAT_ACCEPTED ) );
 
@@ -257,15 +260,18 @@ public class PTSChat extends PTSService {
         }
     }
 
-    protected void onRequestRefused() throws PTSChatIllegalStateException {
+    protected synchronized void onRequestRefused() throws PTSChatIllegalStateException {
         synchronized (this){
             try {
                 if ( flagSemaphore )
                     wait();
                 flagSemaphore = true;
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen )
+                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen ){
+                    flagSemaphore = false;
+                    notify();
                     throw new PTSChatIllegalStateException("Cannot refuse request");
+                }
                 this.destroy();
                 flagChatClosed = true;
                 emit( new PTSEvent( CHAT_REFUSED ) );
@@ -285,8 +291,11 @@ public class PTSChat extends PTSService {
                     wait();
                 flagSemaphore = true;
 
-                if ( !flagServiceStarted || ! flagChatOpen || flagChatClosed )
+                if ( !flagServiceStarted || ! flagChatOpen || flagChatClosed ) {
+                    flagSemaphore = false;
+                    notify();
                     throw new PTSChatIllegalStateException("Cannot quit service");
+                }
                 this.destroy();
                 flagChatClosed = true;
                 emit( new PTSEvent(CHAT_CLOSED) );
