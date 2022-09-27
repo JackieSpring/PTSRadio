@@ -132,7 +132,7 @@ public class PTSChat extends PTSService {
         //TODO Message handling
         Log.e("PTSChat", "TODO: send message");
         Log.d("PTSChat", "SENDING: " + selfID + SERVICE_MESSAGE + msg);
-        serialio.write(selfID + SERVICE_MESSAGE + msg);
+        serialio.write(SERVICE_MESSAGE + msg);
     }
 
 //#############################################################

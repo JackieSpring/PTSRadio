@@ -155,7 +155,7 @@ public class PTSPacket {
             stringpkt = stringpkt.substring(0, stringpkt.lastIndexOf("\r\n") ); //stringpkt.replace("\r\n", "");
 
         stringpklen = stringpkt.length();
-
+/*
         // TODO
         if ( stringpklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_DEBUG) ) {
 
@@ -182,11 +182,12 @@ public class PTSPacket {
             }
 
         }// TODO
-
+*/
         if ( stringpklen > 5 ) {
             action = String.valueOf(stringpkt.charAt(5));
             source = stringpkt.substring(0, 5);
         }
+        Log.e("PTSPacket parsePAcket", "action="+action);
 
 // Check constant packets, then packet length, then action command
 
@@ -248,9 +249,8 @@ public class PTSPacket {
                 case PTSPacket.ACTION_SERVICE_NO:
                 case PTSPacket.ACTION_SERVICE_ADD:
                 case PTSPacket.ACTION_SERVICE_KICK:
-                    if ( stringpklen != 11 ) break;
-
-                    pk = new PTSPacket( action, source, dest, pklen );
+                    if ( stringpklen >= 11 )
+                        pk = new PTSPacket( action, source, dest, pklen );
                     break;
                 case PTSPacket.ACTION_SERVICE_QUIT:
                 case PTSPacket.ACTION_SESSION_PING:
