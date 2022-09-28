@@ -381,10 +381,10 @@ public class PTSRadio {
                 if ( action.equals( PTSPacket.ACTION_SESSION_ID ) ) {
                     ID = (String) pk.getPayloadElement(0);
 
-                    //this.addNext( textModeTrap );
-                    //textModeTrap.startService(serialio, ID);
+                    this.addNext( textModeTrap );
+                    textModeTrap.startService(serialio, ID);
                     // TODO DEBUG
-
+/*
                     PTSService cd = new ChannelDiscover();
                     cd.setListener( (PTSEvent ev) -> {
                         if ( ev.getAction().equals(ChannelDiscover.CHANNEL_FOUND) )
@@ -394,7 +394,7 @@ public class PTSRadio {
                     } );
                     this.addNext(cd);
                     cd.startService(serialio, ID);
-
+*/
                     // TODO DEBUG
                     this.destroy();
 
