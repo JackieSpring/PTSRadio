@@ -22,6 +22,7 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
+import com.cyberbros.PTS.PTSRadio.io.PTSSerialSimulator;
 import com.cyberbros.PTS.PTSRadio.service.BoardTextMode;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
@@ -65,8 +66,6 @@ import java.util.HashMap;
 
 public class PTSRadio {
 
-    private static int DEBUG = 0;
-
     private static final String USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private static final int USB_REQUEST_CODE = 0xdeadc0de;
 
@@ -94,7 +93,6 @@ public class PTSRadio {
     BOARD_GET_ID        = "I";
 
     private final Activity activity;
-    private final Resources resources;
 
     private final UsbManager usbman;
     private final AudioManager audioman;
@@ -154,7 +152,6 @@ public class PTSRadio {
 
     public PTSRadio(@NonNull Activity act){
         activity  = act;
-        resources = activity.getResources();
 
         usbman = (UsbManager) activity.getSystemService(Context.USB_SERVICE);
         audioman = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
@@ -213,10 +210,31 @@ public class PTSRadio {
         return initRadio( findDevice() );
     }
 
+    // TODO DEBUG ONLYYYYYY #######################################
+    public boolean startSimulation() throws PTSRadioIllegalStateException {
+        return startSimulation( 0x0 );
+    }
+    public boolean startSimulation(long flags) throws PTSRadioIllegalStateException {
+        if ( flagIsOpen )
+            throw new PTSRadioIllegalStateException( "Radio already started" );
+        serialio = new PTSSerialSimulator( flags );
+        serialio.setReadListener( serialreader );
+        // TODO create ID filter
+        Log.e("PTSRadio Simulation", "SIMULATION STARTED");
+        flagIsOpen = true;
+        flagUsbRequestSent = false;
+        flagUsbConnected = true;
+        initTrapChain();
+        return true;
+    }
+    // TODO DEBUG ONLYYYYYYY #######################################
+
     public void close() {
         activity.unregisterReceiver(usbreciver);
         if ( flagUsbConnected )
             serialio.close();
+        trapchain.destroyChain();
+        trapchain = null;
         flagIsOpen = false;
         flagUsbConnected = false;
         // TODO close packetfilter, serialio, audioio
@@ -282,8 +300,7 @@ public class PTSRadio {
             serialio.setReadListener( serialreader );
             initTrapChain();
             // TODO create ID filter
-            Log.e("onUsbPermission", "TODO: create ID filter " + DEBUG + " " + device.getDeviceName());
-            DEBUG++;
+            Log.e("onUsbPermission", "TODO: create ID filter " + device.getDeviceName());
             flagIsOpen = true;
             flagUsbRequestSent = false;
             flagUsbConnected = true;
@@ -414,8 +431,8 @@ public class PTSRadio {
     public void startService (PTSService serv){
         if ( serv == null || ! flagIsOpen )
             return;
-        serv.startService(serialio, ID);
         trapchain.addNext(serv);
+        serv.startService(serialio, ID);
     }
 
 

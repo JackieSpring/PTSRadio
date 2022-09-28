@@ -17,12 +17,16 @@ public abstract class PTSService extends PTSPacketTrap {
         this.callback = l;
     }
 
+    public void startService( PTSSerial io, String id ) {
+        serialio = io;
+        selfID = id;
+        flagServiceStarted = true;
+    };
+
     protected void emit(PTSEvent e){
         new Thread(() -> callback.handle(e) ).start();
     }
 
     @Override
     public abstract boolean trap(PTSPacket pk);
-
-    public abstract void startService( PTSSerial io, String id );
 }

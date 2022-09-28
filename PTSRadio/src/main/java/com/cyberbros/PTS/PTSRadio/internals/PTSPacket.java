@@ -187,7 +187,6 @@ public class PTSPacket {
             action = String.valueOf(stringpkt.charAt(5));
             source = stringpkt.substring(0, 5);
         }
-        Log.e("PTSPacket parsePAcket", "action="+action);
 
 // Check constant packets, then packet length, then action command
 

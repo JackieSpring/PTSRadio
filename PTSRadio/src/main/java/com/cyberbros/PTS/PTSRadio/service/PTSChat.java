@@ -132,7 +132,6 @@ public class PTSChat extends PTSService {
     }
 
     public void send(String msg) {
-        Log.d("PTSChat", "SENDING: " + selfID + SERVICE_MESSAGE + msg);
         try {
             for (Iterator<byte[]> it = mb.msgToPkt(msg); it.hasNext(); ) {
                 byte[] data = it.next();
@@ -175,7 +174,7 @@ public class PTSChat extends PTSService {
                         String msg = mb.pktToMsg( (String)pk.getPayloadElement(0), this.chatMember );
                         if ( msg != null ) {
                             //TODO handle message and message protocol
-                            Log.e("PTSChat", "TODO: handle message");
+                            Log.e("PTSChat", "TODO: handle message recived");
                             PTSEvent ev = new PTSEvent(CHAT_MESSAGE);
                             ev.addPayloadElement( msg );
                             emit(ev);
@@ -321,21 +320,22 @@ public class PTSChat extends PTSService {
 //#############################################################
 //                  Chat Request
 //#############################################################
+    // PTSRadio.startService();
     @Override
     public void startService( PTSSerial io, String id ) throws PTSChatIllegalStateException {
         startService(io, id, true);
     }
 
 
+    // PTSRadio -> REQUEST_CHAT
     public void startService( PTSSerial io, String id, boolean isStartingConnection ) throws PTSChatIllegalStateException {
+        Log.e("PTSChat", "isStartingConnection=" + isStartingConnection + " id=" + id + " io=" + io);
         if ( flagChatOpen || flagChatClosed )
             throw new PTSChatIllegalStateException("Cannot start chat service");
         if ( io == null || id == null)
             return;
 
-        serialio = io;
-        selfID = id;
-        flagServiceStarted = true;
+        super.startService(io, id);
         if ( isStartingConnection )
             serialio.write( SERVICE_REQUEST_CHAT + chatMember );
     }

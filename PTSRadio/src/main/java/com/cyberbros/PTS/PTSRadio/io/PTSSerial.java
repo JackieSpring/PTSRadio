@@ -29,6 +29,14 @@ public class PTSSerial {
     private boolean isopen = false;
     private PTSSerialCallback readcallback = null;
 
+    protected PTSSerial(){
+        Log.e("PTSSerial", "DEBUG CONSTRUCTOR INVOKED");
+        usbman = null;
+        rawdevice = null;
+        connection = null;
+        serial = null;
+    }
+
     public PTSSerial(UsbDevice dev, UsbManager man) throws IOException {
         rawdevice = dev;
         usbman = man;

@@ -1,5 +1,5 @@
 
-DOC VERSION: 0.1
+DOC VERSION: 0.2
 
  INDICE 
 ----------------------------------
@@ -8,7 +8,9 @@ DOC VERSION: 0.1
 - Utilizzo
 - Classi
 - Limitazioni
+- Simulatore
 - Referenze
+- Versioni
 
 
  INSTALLAZIONE
@@ -270,6 +272,12 @@ ooooooooooooooooooooooooooooooo PTSRadio ooooooooooooooooooooooooooooooooooooooo
 							no puo essere o è gia stata avviata, 
 							lancia PTSRadioIllegalStateException
 	public void startService (PTSService )		Avvia un servizio
+	public boolean startSimulation()		Avvia la scheda radio in modalità 
+	public boolean startSimulation( long flags )	simulazione, se la radio non puo essere 
+							o è gia stata avviata, lancia 
+							PTSRadioIllegalStateException.
+							L'argomento flags modifica il comportamento
+							del simulatore (si veda sezione Simulatore)
 
 _________________________________________________________________________________________________
 ooooooooooooooooooooooooooooooo PTSChat ooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
@@ -285,7 +293,7 @@ ooooooooooooooooooooooooooooooo PTSChat oooooooooooooooooooooooooooooooooooooooo
     CHAT_REFUSED            	Richiesta di inizio chat inviata, 
 				richiesta rifiutata dal chatMember
     CHAT_REQUEST_TIMEOUT    	Richiesta di inizio chat inviata, ma 
-				non si è ottenuta risposta
+				non si è ottenuta risposta, oppure
     CHAT_MESSAGE            	Sessione chat attiva ha ricevuto un 	[ (Srting) messaggio ]
 				messaggio dal client
     CHAT_CLOSED             	Sessione chat terminata
@@ -333,6 +341,27 @@ ooooooooooooooooooooooooooooooo PTSListener oooooooooooooooooooooooooooooooooooo
     public void handle( PTSEvent event )	Gestisce indipendentemente il PTSEvent emesso
 
 
+
+_________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSSerialSimulator oooooooooooooooooooooooooooooooooooooooooooooo
+
+--- Attributi ----------------------------------------- DESCRIZIONE -----------------------------
+    public static long FLAG_NONE 			Nessuna modifica, il simulatore accetta
+							qualsiasi richiesta chat in arrivo, non
+							termina le sessioni e risponde con un
+							messagio a qualsiasi messaggio ricevuto
+    public static long FLAG_CHAT_REQUEST_SEND		Il simulatore invia una richiesta di
+							inizio chat all'avviamento della scheda
+    public static long FLAG_CHAT_REQUEST_TIMEOUT	Il simulatore fa scadere in timeout 
+							le richieste chat ricevute / non avvia la
+							sessione chat quando riceve conferma di 
+							accettazione richiesta
+    public static long FLAG_CHAT_REQUEST_REFUSE		Il simulatore rifiuta qulsiasi richiesta
+							chat in arrivo
+    public static long FLAG_CHAT_QUIT			Il simulatore termina la sessione chat
+							attiva non appena riceve un messaggio
+
+
 _________________________________________________________________________________________________
 _________________________________________________________________________________________________
 
@@ -340,7 +369,7 @@ ________________________________________________________________________________
 
  LIMITAZIONI
 ----------------------------------
-*	Anche se PTSRadio lo permette, la schead non è in grado di gestire più di un servizio alla 
+*	Anche se PTSRadio lo permette, la scheda non è in grado di gestire più di un servizio alla 
 	volta, dunque non si possono utilizzare piu chat allo stesso tempo
 
 *	PTSRadio no emette gli eventi:		
@@ -360,7 +389,81 @@ ________________________________________________________________________________
 *	Talvolta PTSRadio si confonde connettendosi al device sbagliato, sarà sufficiente staccare
 	e riattaccare la scheda per tornare in funzione
 
-*	Al momento la chat non può inviare messaggi piu lunghi di 26 byte, nel futuro si risolverà
+*	I messaggi inviati da PTSChat possono avere lunghezza masima di 5632 cartteri
+
+
+ SIMULATORE
+----------------------------------
+In caso non si sia in possesso di un dispositivo radio fisico, è comunque possibile effettuare dei
+test avviando PTSRadio in modalità di simulazione. Quando ci si trova in questa modalità, PTSRadio
+simula la trasmissione e ricezione da una scheda fisica con ID 40000, permettendo di avviare
+sessioni di chat e di interagire con esse.
+
+> Avviare PTSRadio in modalità simulazione
+
+	PTSRadio radio = new PTSRadio();
+	radio.setListener( radioListener );
+	radio.startSimulation();
+
+Da questo momento in poi si potrà continuare ad interagire normalmente con PTSRadio e tutte le sue
+funzionalità come se si fosse connessi ad una scheda, ad esempio è possibile avviare una sessione
+chat simulata con qualsiasi ID, e la richiesta verrà automaticamente accettata:
+	
+	PTSChat chat = new PTSChat( QUALSIASI-ID );
+	chat.setListener( chatListener );
+	radio.startService( chat );
+
+Questa sessione sarà interattiva e ad ogni messaggio inviato risponderà inviando un messaggio a sua
+volta contenete l'orario corrente:
+	
+	chat.send( "messaggio corto" );
+	// Evento ricevuto -> CHAT_MESSAGGIO
+	// Payload -> Wed Sep 28 13:23:40 GMT+02:00 2022
+
+Se sarà inviato un messaggio di lunghezza superiore a 22 caratteri, allora si riceverà un messaggio
+lungo contenete l'orario
+
+	chat.send( "messaggio piuttosto lungo per questa scheda" );
+	// Evento ricevuto -> CHAT_MESSAGGIO
+	// Payload -> Wed Sep 28 13:23:40 GMT+02:00 2022 ~~~~~~~~~ looooong message indeed ~~~~~~~
+
+è possibile configurare il comportamento del simulatore attraverso delle flag da passare come
+argomento a PTSRadio.startSimulation( long flags ), nello specifico:
+
+	FLAG_CHAT_REQUEST_SEND		All'avvio della scheda, invia una richiesta di inizio chat
+	FLAG_CHAT_REQUEST_TIMEOUT	Provoca il timeout di tutte le richieste di chat inviate o
+					ricvute
+	FLAG_CHAT_REQUEST_REFUSE	Rifiuta tutte le richieste di chat ricevute
+	FLAG_CHAT_QUIT			Qundo la sessione chat è stata attivata, al primo messaggio
+					ricevuto termina la chat
+
+NON è possibile modificare le flag una volta che la radio è stata avviata
+
+Esempi:
+> Ricevere richiesta chat:
+
+	PTSRadio radio = new PTSRadio();
+	radio.setListener( radioListener );
+	radio.startSimulation( PTSSerialSimulator.FLAG_CHAT_REQUEST_SEND );
+
+> Ricevere richiesta chat e ricevere terminazione chat
+
+	PTSRadio radio = new PTSRadio();
+	radio.setListener( radioListener );
+	radio.startSimulation( PTSSerialSimulator.FLAG_CHAT_REQUEST_SEND | PTSSerialSimulator.FLAG_CHAT_QUIT );
+
+> Provocare il timeout di una richiesta
+
+	PTSRadio radio = new PTSRadio();
+	radio.setListener( radioListener );
+	radio.startSimulation( PTSSerialSimulator.FLAG_CHAT_REQUEST_TIMEOUT );
+
+> Rifiutare le richieste
+
+	PTSRadio radio = new PTSRadio();
+	radio.setListener( radioListener );
+	radio.startSimulation( PTSSerialSimulator.FLAG_CHAT_REQUEST_REFUSE );
+
 
 
  REFERENZE
@@ -369,4 +472,32 @@ ________________________________________________________________________________
 - https://jitpack.io/#JackieSpring/PTSRadio/development-SNAPSHOT
 - https://github.com/JackieSpring/PTSRadio
 - chiamatemi
+
+
+
+ VERSIONI
+----------------------------------
+***** 0.1 ***** main, development
+- Aggiunte Nuove classi: PTSRadio, PTSChat, PTSEvent, PTSListener
+
+- Aggiunte Funzionalità: è possibile avviare una chat tra due dispositivi PTS
+
+***** 0.2 ***** development
+- Aggiunte Nuove classi: PTSSerialSimulator
+
+- Aggiunte Funzionalità: è possibile avviare PTSRadio in modalità simulazione
+			 è possibile effettuare queste operazioni in modalità simulazione:
+				° Inviare richiesta chat e ricevere accettazione / rifiuto / timeout
+				° Ricevere richiesta di avvio chat dal simulatore e accettare / rifiutare
+				° Inviare messaggi sulla sessione chat simulata
+				° Ricevere messaggi dalla sessione chat simulata
+				° Terminare la sessione chat simulata
+
+- Modifica Funzionalità: PTSChat invierà un evento CHAT_REQUEST_TIMEOUT anche quando si
+			 riceve una richiesta di chat ma non si risponde entro 45 secondi
+
+- Modifica Funzionalità: PTSChat.send() è ingrado di inviare messaggi lunghi al più 5632 caratteri.
+
+
+
 

@@ -47,19 +47,21 @@ public class PTSMessageBuilder {
         }
 
         for( int pkt_index = 0; pkt_index < n_pkt_tot ; pkt_index++ ) {
-            byte [] packet = new byte[ PKT_MAX_LEN ];
+            byte [] packet;
             int start = pkt_index * PAYLOAD_MAX_LEN;
             int end;
-
-            packet[0] = (byte)( n_msg_send >> 8 );
-            packet[1] = (byte)n_msg_send;
-            packet[2] = (byte)n_pkt_tot;
-            packet[3] = (byte)pkt_index;
 
             if ( (pkt_index + 1) == n_pkt_tot )
                 end = byte_overflow;
             else
                 end = PAYLOAD_MAX_LEN;
+
+            packet = new byte[ HEADERS_BYTES + end ];
+
+            packet[0] = (byte)( n_msg_send >> 8 );
+            packet[1] = (byte)n_msg_send;
+            packet[2] = (byte)n_pkt_tot;
+            packet[3] = (byte)pkt_index;
 
             for ( int i = 0; i < end; i++ )
                 packet[ HEADERS_BYTES + i ] = msg[ start + i];
@@ -132,8 +134,31 @@ public class PTSMessageBuilder {
         return value;
     }
 
+
+
+    // TODO DEBUG rimuovere a fine progetto!!!!!
     // AGGIUNTA FRA
     public HashMap<Integer,TreeSet<byte[]>> getSenderHashMap( String sender) {
         return memoria.get(sender);
+    }
+
+
+    public static String printPacket( String packet ){
+        return printPacket( packet.getBytes() );
+    }
+    public static String printPacket( byte[] packet ){
+        String ret = "";
+        StringBuilder sb = new StringBuilder();
+
+        for ( int i = HEADERS_BYTES; i < packet.length; i++ )
+            sb.append( (char)packet[i] );
+
+        ret += "Message len: " + packet.length + "\n";
+        ret += "Message ID: " + bytesToNum( packet[0], packet[1] ) + "\n";
+        ret += "Message pkt_tot: " + packet[2] + "\n";
+        ret += "Message pkt: " + packet[3] + "\n";
+        ret += "Message payload: " + sb.toString() + "\n";
+
+        return ret;
     }
 }

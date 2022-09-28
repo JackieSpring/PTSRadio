@@ -2,6 +2,10 @@ package com.cyberbros.PTS.PTSRadio;
 //vendor-id="6790" product-id="29987" class="255" subclass="0" protocol="0"
 public class PTSConstants {
     public static final int
+    VERSION_MAJOR   = 0,
+    VERSION_MINOR   = 2,
+
+
     USB_BAUD_RATE   = 9600,
     USB_DATA_BITS   = 8,
     USB_VENDOR_ID   = 6790,
@@ -15,5 +19,9 @@ public class PTSConstants {
 
     PING_TIMEOUT = 60,
 
-    SERVICE_TIMEOUT = 45;
+    SERVICE_TIMEOUT = 45,
+
+    CALL_CHANNEL_FIRST_CHANNEL = 0,
+    CALL_CHANNEL_LAST_CHANNEL = 256,
+    CALL_CHANNEL_INCREMENT = 2;
 }
