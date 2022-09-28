@@ -89,6 +89,7 @@ public class ChannelDiscover extends PTSService {
         super.startService(io, id);
         serialio.write( BOARD_RESTART );
         discoverChannel( START_CHANNEL );
+
     }
 
 }
