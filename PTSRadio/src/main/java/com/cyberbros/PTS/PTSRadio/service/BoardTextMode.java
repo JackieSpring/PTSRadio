@@ -25,7 +25,7 @@ public class BoardTextMode extends PTSService {
     public boolean trap(PTSPacket pk) {
         if ( !super.flagServiceStarted )
             return false;
-        Log.d("BoardTextMode", String.valueOf(pk));
+
         String action = pk.getAction();
         boolean isHandled = false;
 

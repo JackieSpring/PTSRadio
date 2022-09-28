@@ -4,6 +4,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+/*
+* TODO OGNI OPERAZIONE SULLA CHAIN VA SINCRONIZZATA CON wait() e notify()
+*
+* */
+
 public abstract class PTSPacketTrap {
     private PTSPacketTrap prev;
     private PTSPacketTrap next;
@@ -39,8 +44,13 @@ public abstract class PTSPacketTrap {
     }
 
     public synchronized void handle( PTSPacket pk ){
-        if ( this.trap(pk) == false && next != null )
-            next.handle(pk);
+        if ( this.trapManager(pk) == false && (this.next != null) )
+            this.next.handle(pk);
+    }
+
+    // Override for pre-trap checks
+    protected boolean trapManager( PTSPacket pk ) {
+        return this.trap( pk );
     }
 
     // Return true to stop packet propagation

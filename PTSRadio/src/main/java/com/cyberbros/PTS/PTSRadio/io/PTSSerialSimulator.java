@@ -83,6 +83,7 @@ public class PTSSerialSimulator extends PTSSerial {
 
                 if ( checkActiveFlag( FLAG_CHAT_REQUEST_SEND ) ) {
                     isChatRequestWaiting = true;
+                    chatClient = FAKE_ID;
                     send( FAKE_ID + "C" + SELF_ID );
                 }
             }

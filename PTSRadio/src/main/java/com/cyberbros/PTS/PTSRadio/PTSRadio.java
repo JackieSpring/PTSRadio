@@ -24,6 +24,7 @@ import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerialSimulator;
 import com.cyberbros.PTS.PTSRadio.service.BoardTextMode;
+import com.cyberbros.PTS.PTSRadio.service.ChannelDiscover;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
 import java.io.IOException;
@@ -218,7 +219,6 @@ public class PTSRadio {
         if ( flagIsOpen )
             throw new PTSRadioIllegalStateException( "Radio already started" );
         serialio = new PTSSerialSimulator( flags );
-        serialio.setReadListener( serialreader );
         // TODO create ID filter
         Log.e("PTSRadio Simulation", "SIMULATION STARTED");
         flagIsOpen = true;
@@ -297,7 +297,6 @@ public class PTSRadio {
 
         try {
             serialio = new PTSSerial(device, usbman);
-            serialio.setReadListener( serialreader );
             initTrapChain();
             // TODO create ID filter
             Log.e("onUsbPermission", "TODO: create ID filter " + device.getDeviceName());
@@ -348,6 +347,7 @@ public class PTSRadio {
             public boolean trap(PTSPacket pk) {
                 Log.d("initTrapChain", "printChain");
                 printChain();
+                Log.d("GatewayTrap", String.valueOf(pk));
                 return false;
             }
         };
@@ -380,9 +380,22 @@ public class PTSRadio {
 
                 if ( action.equals( PTSPacket.ACTION_SESSION_ID ) ) {
                     ID = (String) pk.getPayloadElement(0);
-                    textModeTrap.startService(serialio, ID);
 
-                    this.addNext( textModeTrap );
+                    //this.addNext( textModeTrap );
+                    //textModeTrap.startService(serialio, ID);
+                    // TODO DEBUG
+
+                    PTSService cd = new ChannelDiscover();
+                    cd.setListener( (PTSEvent ev) -> {
+                        if ( ev.getAction().equals(ChannelDiscover.CHANNEL_FOUND) )
+                            Log.e("ChannelDiscover", "Channel Found: " + ev.getPayloadElement(0));
+                        else if ( ev.getAction().equals(ChannelDiscover.CHANNEL_NOT_FOUND) )
+                            Log.e("ChannelDiscover", "Channel NOT Found ");
+                    } );
+                    this.addNext(cd);
+                    cd.startService(serialio, ID);
+
+                    // TODO DEBUG
                     this.destroy();
 
                     PTSEvent eventConnected = new PTSEvent( PTSRadio.CONNECTED );
@@ -422,6 +435,7 @@ public class PTSRadio {
 
         trapchain = gatewayTrap;
         trapchain.addNext(bootTrap);
+        serialio.setReadListener( serialreader );
         this.send( BOARD_RESTART );
     }
 

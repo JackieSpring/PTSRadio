@@ -28,5 +28,12 @@ public abstract class PTSService extends PTSPacketTrap {
     }
 
     @Override
+    protected boolean trapManager( PTSPacket pk ) {
+        if ( flagServiceStarted )
+            return super.trapManager(pk);
+        return false;
+    }
+
+    @Override
     public abstract boolean trap(PTSPacket pk);
 }
