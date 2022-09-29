@@ -498,6 +498,8 @@ Esempi:
 
 - Modifica Funzionalità: PTSChat.send() è ingrado di inviare messaggi lunghi al più 5632 caratteri.
 
+***** 0.2.1 ***** development
+- Debug
 
 
 

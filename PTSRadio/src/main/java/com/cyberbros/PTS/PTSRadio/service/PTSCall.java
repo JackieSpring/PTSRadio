@@ -1,5 +1,6 @@
 package com.cyberbros.PTS.PTSRadio.service;
 
+import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
@@ -17,14 +18,14 @@ public class PTSCall extends PTSService {
 
 //Commands
     private static final String
-    SERVICE_ACCEPT = "Y",
-    SERVICE_REFUSE = "N",
-    SERVICE_QUIT = "E",
-    SERVICE_TALK = "T",
-    SERVICE_LISTEN = "L",
-    SERVICE_START_PREFIX = "A",
-    SERVICE_START_HOST_SUFFIX = "B",
-    SERVICE_START_CLIENT_SUFFIX = "A";
+    SERVICE_ACCEPT  = PTSConstants.CMD_SERVICE_ACCEPT,
+    SERVICE_REFUSE  = PTSConstants.CMD_SERVICE_REFUSE,
+    SERVICE_QUIT    = PTSConstants.CMD_SERVICE_QUIT,
+    SERVICE_TALK    = PTSConstants.CMD_CALL_TALK,
+    SERVICE_LISTEN  = PTSConstants.CMD_CALL_LISTEN,
+    SERVICE_START_PREFIX = PTSConstants.CMD_CALL_START_PREFIX,
+    SERVICE_START_HOST_SUFFIX = PTSConstants.CMD_CALL_START_HOST_SUFFIX,
+    SERVICE_START_CLIENT_SUFFIX = PTSConstants.CMD_CALL_START_CLIENT_SUFFIX;
 
     private String callMember;
     private String callChannel;

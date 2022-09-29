@@ -2,6 +2,7 @@ package com.cyberbros.PTS.PTSRadio.service;
 
 import android.util.Log;
 
+import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.PTSRadio;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
@@ -71,11 +72,11 @@ public class PTSChat extends PTSService {
 
 // Commands
     private static final String
-    SERVICE_ACCEPT = "Y",
-    SERVICE_REFUSE = "N",
-    SERVICE_QUIT = "E",
-    SERVICE_MESSAGE = "M",
-    SERVICE_REQUEST_CHAT = "C";
+    SERVICE_ACCEPT      = PTSConstants.CMD_SERVICE_ACCEPT,
+    SERVICE_REFUSE      = PTSConstants.CMD_SERVICE_REFUSE,
+    SERVICE_QUIT        = PTSConstants.CMD_SERVICE_QUIT,
+    SERVICE_MESSAGE     = PTSConstants.CMD_SERVICE_MESSAGE,
+    SERVICE_REQUEST_CHAT= PTSConstants.CMD_SERVICE_REQUEST_CHAT;
 
     private String chatMember;
     private PTSMessageBuilder mb;
@@ -329,7 +330,6 @@ public class PTSChat extends PTSService {
 
     // PTSRadio -> REQUEST_CHAT
     public void startService( PTSSerial io, String id, boolean isStartingConnection ) throws PTSChatIllegalStateException {
-        Log.e("PTSChat", "isStartingConnection=" + isStartingConnection + " id=" + id + " io=" + io);
         if ( flagChatOpen || flagChatClosed )
             throw new PTSChatIllegalStateException("Cannot start chat service");
         if ( io == null || id == null)

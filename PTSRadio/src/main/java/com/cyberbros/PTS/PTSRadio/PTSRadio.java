@@ -88,10 +88,10 @@ public class PTSRadio {
 
     // BOARD COMMANDS
     private static final String
-    BOARD_MODE_TEXT     = "T",
-    BOARD_MODE_AUDIO    = "A",
-    BOARD_RESTART       = "R",
-    BOARD_GET_ID        = "I";
+    BOARD_MODE_TEXT     = PTSConstants.CMD_BOARD_MODE_TEXT,
+    BOARD_MODE_AUDIO    = PTSConstants.CMD_BOARD_MODE_AUDIO,
+    BOARD_RESTART       = PTSConstants.CMD_BOARD_RESTART,
+    BOARD_GET_ID        = PTSConstants.CMD_BOARD_GET_ID;
 
     private final Activity activity;
 
@@ -383,19 +383,6 @@ public class PTSRadio {
 
                     this.addNext( textModeTrap );
                     textModeTrap.startService(serialio, ID);
-                    // TODO DEBUG
-/*
-                    PTSService cd = new ChannelDiscover();
-                    cd.setListener( (PTSEvent ev) -> {
-                        if ( ev.getAction().equals(ChannelDiscover.CHANNEL_FOUND) )
-                            Log.e("ChannelDiscover", "Channel Found: " + ev.getPayloadElement(0));
-                        else if ( ev.getAction().equals(ChannelDiscover.CHANNEL_NOT_FOUND) )
-                            Log.e("ChannelDiscover", "Channel NOT Found ");
-                    } );
-                    this.addNext(cd);
-                    cd.startService(serialio, ID);
-*/
-                    // TODO DEBUG
                     this.destroy();
 
                     PTSEvent eventConnected = new PTSEvent( PTSRadio.CONNECTED );

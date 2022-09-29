@@ -22,7 +22,7 @@ public class BoardTextMode extends PTSService {
     }
 
     @Override
-    public boolean trap(PTSPacket pk) {
+    public synchronized boolean trap(PTSPacket pk) {
         if ( !super.flagServiceStarted )
             return false;
 

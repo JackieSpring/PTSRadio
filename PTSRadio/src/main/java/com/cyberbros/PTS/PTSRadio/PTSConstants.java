@@ -24,4 +24,30 @@ public class PTSConstants {
     CALL_CHANNEL_FIRST_CHANNEL = 0,
     CALL_CHANNEL_LAST_CHANNEL = 256,
     CALL_CHANNEL_INCREMENT = 2;
+
+
+    public static final String
+    CMD_BOARD_RESTART   = "R",
+    CMD_BOARD_MODE_TEXT = "T",
+    CMD_BOARD_MODE_AUDIO= "A",
+    CMD_BOARD_GET_ID    = "I",
+
+    CMD_SERVICE_REQUEST_CHAT    = "C",
+    CMD_SERVICE_REQUEST_GROUP   = "G",
+    CMD_SERVICE_REQUEST_CALL    = "C",
+
+    CMD_SERVICE_ACCEPT  = "Y",
+    CMD_SERVICE_REFUSE  = "N",
+    CMD_SERVICE_INVITE  = "+",
+    CMD_SERVICE_KICK    = "-",
+    CMD_SERVICE_QUIT    = "E",
+    CMD_SERVICE_MESSAGE = "M",
+
+    CMD_CHANNEL_DISCOVER = "S",
+
+    CMD_CALL_TALK           = "T",
+    CMD_CALL_LISTEN         = "L",
+    CMD_CALL_START_PREFIX   = "A",
+    CMD_CALL_START_HOST_SUFFIX = "B",
+    CMD_CALL_START_CLIENT_SUFFIX = "A";
 }
