@@ -117,8 +117,8 @@ public class PTSChat extends PTSService {
     }
 
     public void accept() throws PTSChatIllegalStateException {
-        onRequestAccepted();
         serialio.write( SERVICE_ACCEPT + chatMember );
+        onRequestAccepted();
     }
 
     public void refuse() throws PTSChatIllegalStateException {
@@ -164,7 +164,8 @@ public class PTSChat extends PTSService {
             if ( flagSemaphore ) {
                 try {
                     wait();
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
@@ -233,8 +234,11 @@ public class PTSChat extends PTSService {
                     wait();
                 flagSemaphore = true;
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  )
+                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ) {
+                    flagSemaphore = false;
+                    notify();
                     throw new PTSChatIllegalStateException("Timeout during illegal state");
+                }
                 this.destroy();
                 flagChatClosed = true;
                 emit( new PTSEvent( CHAT_REQUEST_TIMEOUT ) );
@@ -319,7 +323,7 @@ public class PTSChat extends PTSService {
     }
 
 //#############################################################
-//                  Chat Request
+//                  Chat Service Init
 //#############################################################
     // PTSRadio.startService();
     @Override

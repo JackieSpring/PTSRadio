@@ -56,6 +56,7 @@ public class BoardTextMode extends PTSService {
     private void onRequestChat( PTSPacket pk ){
         PTSChat chat = new PTSChat( pk.getSource() );
         chat.startService( serialio, selfID, false );
+        this.addPrev(chat);
         PTSEvent ev = new PTSEvent(BOARD_REQUEST_CHAT);
         ev.addPayloadElement( chat );
 

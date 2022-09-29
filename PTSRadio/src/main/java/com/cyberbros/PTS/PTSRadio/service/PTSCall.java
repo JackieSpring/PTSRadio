@@ -1,6 +1,10 @@
 package com.cyberbros.PTS.PTSRadio.service;
 
+import android.util.Log;
+
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
+import com.cyberbros.PTS.PTSRadio.exception.PTSCallIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
@@ -40,13 +44,90 @@ public class PTSCall extends PTSService {
         callMember = target;
     }
 
+//#############################################################
+//                  Call Public methods
+//#############################################################
+
+    public void accept(){
+        // TODO Call accept request
+        Log.e( "PTSCall", "TODO: Call .accept() method" );
+    }
+
+    public void refuse(){
+        // TODO Call refuse request
+        Log.e( "PTSCall", "TODO: Call .refuse() method" );
+    }
+
+    public void talk(){
+        // TODO Call talk request
+        Log.e( "PTSCall", "TODO: Call .talk() method" );
+    }
+
+    public void listen()  {
+        // TODO Call listen request
+        Log.e( "PTSCall", "TODO: Call .listen() method" );
+    }
+
+    public void quit(){
+        // TODO Call quit request
+        Log.e( "PTSCall", "TODO: Call .quit() method" );
+    }
+
+//#############################################################
+//                  MAIN TRAP
+//#############################################################
+
     @Override
     public boolean trap(PTSPacket pk) {
+        String action = pk.getAction();
+
+        synchronized (this){
+            try {
+                if ( flagSempahore )
+                    wait();
+
+                if ( flagCallOpen ) {
+                    // TODO Call open handler
+                }
+                else {
+                    // TODO Call closed handler
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         return false;
     }
 
+
+//#############################################################
+//                  Call Event Handlers
+//#############################################################
+
+
+//#############################################################
+//                  Call Service Init
+//#############################################################
+
     @Override
-    public void startService(PTSSerial io, String id) {
+    public void startService(PTSSerial io, String id) throws PTSChatIllegalStateException {
+        startService(io, id, true);
+    }
+
+    public void startService(PTSSerial io, String id, boolean isStartingConnection) throws PTSChatIllegalStateException {
+        if ( flagCallOpen || flagCallClosed )
+            throw new PTSCallIllegalStateException();
+
+        if ( io == null || id == null )
+            return;
+
         super.startService(io, id);
+        if ( isStartingConnection )
+            // TODO Handle Call starting connection
+            Log.e( "PTSCall", "TODO: startService on startingConnection" );
+        else
+            // TODO Handle Call recieving connection
+            Log.e( "PTSCall", "TODO: startService on recieving connection" );
+
     }
 }
