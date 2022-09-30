@@ -26,9 +26,8 @@ public abstract class PTSService extends PTSPacketTrap {
     };
 
     protected void emit(PTSEvent e){
-        // TODO DEBUG
-        Log.e("PTSServiceEmit",e.getAction());
-        new Thread(() -> callback.handle(e) ).start();
+        if ( callback != null )
+            new Thread(() -> callback.handle(e) ).start();
     }
 
     @Override
