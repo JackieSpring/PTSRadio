@@ -64,8 +64,8 @@ public class PTSPacket {
     ACTION_SESSION_PING = "O",
     ACTION_SESSION_ID = "_",
 
-    ACTION_PTT_GO = "PTT1",
-    ACTION_PTT_STOP = "PTT0",
+    ACTION_PTT_GO = "PTT0",
+    ACTION_PTT_STOP = "PTT1",
 
     ACTION_CHANNEL_OK = "Y",
     ACTION_CHANNEL_KO = "N";

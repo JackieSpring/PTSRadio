@@ -14,6 +14,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.cyberbros.PTS.PTSRadio.exception.PTSException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRadioException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRadioIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
@@ -23,6 +24,7 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerialSimulator;
+import com.cyberbros.PTS.PTSRadio.service.BoardSetMode;
 import com.cyberbros.PTS.PTSRadio.service.BoardTextMode;
 import com.cyberbros.PTS.PTSRadio.service.ChannelDiscover;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
@@ -337,7 +339,7 @@ public class PTSRadio {
         // send(R) -> [ bootTrap, send(T) ] -> [ initTrap, send(I) ] -> [ textModeTrap ]
 
         PTSPacketTrap gatewayTrap;
-        PTSPacketTrap bootTrap;
+        BoardSetMode bootTrap;
         PTSPacketTrap initTrap;
         BoardTextMode textModeTrap;
 
@@ -345,9 +347,11 @@ public class PTSRadio {
         gatewayTrap = new PTSPacketTrap() {
             @Override
             public boolean trap(PTSPacket pk) {
+                // TODO DEBUG ##########################
                 Log.d("initTrapChain", "printChain");
                 printChain();
                 Log.d("GatewayTrap", String.valueOf(pk));
+                // TODO DEBUG ##########################
                 return false;
             }
         };
@@ -394,31 +398,16 @@ public class PTSRadio {
             }
         };
 
-        bootTrap = new PTSPacketTrap() {
-            @Override
-            public boolean trap(PTSPacket pk) {
-                String action = pk.getAction();
-                //Log.d("bootTrap", String.valueOf(pk));
-                // STAGE 1: Recive reset confirm, then
-                if ( action.equals( PTSPacket.ACTION_DEBUG ) && pk.getPayloadLength() == 1 ) {
-
-                    String msg = (String) pk.getPayloadElement(0);
-
-                    if ( msg.length() >= 30 && msg.substring(1, 30).equals("Serial check up STATUS ... OK")) {
-                        PTSRadio.this.send(PTSRadio.BOARD_MODE_TEXT);
-                        return true;
-                    } else if ( msg.length() >= 5 && msg.substring(1, 5).equals("text") ){
-                        this.addNext( initTrap );
-                        this.destroy();
-                        PTSRadio.this.send( PTSRadio.BOARD_GET_ID );
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-        };
-
+        bootTrap = new BoardSetMode( BoardSetMode.SET_BOARD_TEXT_MODE, () -> {
+            PTSRadio.this.trapchain.addNext( initTrap );
+            PTSRadio.this.send( PTSRadio.BOARD_GET_ID );
+        } );
+        bootTrap.setOnErrorCallback( () -> {
+            PTSEvent ev = new PTSEvent( ERROR_USB );
+            ev.addPayloadElement( new PTSException("Failed restarting board at boot time"));
+            emit(ev);
+        } );
+        bootTrap.startService(serialio, ID);
 
         trapchain = gatewayTrap;
         trapchain.addNext(bootTrap);

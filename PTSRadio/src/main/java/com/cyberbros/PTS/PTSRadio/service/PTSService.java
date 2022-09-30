@@ -1,5 +1,7 @@
 package com.cyberbros.PTS.PTSRadio.service;
 
+import android.util.Log;
+
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
@@ -24,6 +26,8 @@ public abstract class PTSService extends PTSPacketTrap {
     };
 
     protected void emit(PTSEvent e){
+        // TODO DEBUG
+        Log.e("PTSServiceEmit",e.getAction());
         new Thread(() -> callback.handle(e) ).start();
     }
 

@@ -1,5 +1,7 @@
 package com.cyberbros.PTS.PTSRadio.service;
 
+import android.util.Log;
+
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
@@ -38,19 +40,20 @@ public class ChannelDiscover extends PTSService {
         boolean isHandled = false;
 
         switch(action) {
-            case PTSPacket.ACTION_DEBUG:
-                String msg = (String) pk.getPayloadElement(0);
-                if (msg.length() >= 30 && msg.substring(1, 30).equals("Serial check up STATUS ... OK") ) {
-                    isHandled = true;
-                    this.destroy();
-                    serialio.write(BOARD_MODE_TEXT);
-                }
-                break;
             case PTSPacket.ACTION_CHANNEL_OK:
                 if ( flagFirstChannelFound ) {
-                    PTSEvent event = new PTSEvent( CHANNEL_FOUND );
-                    event.addPayloadElement( String.format("%0"+ CHANNEL_DIGITS + "d", channel) );
-                    emit( event );
+                    BoardSetMode setTextMode = new BoardSetMode(BoardSetMode.SET_BOARD_TEXT_MODE, () -> {
+                        ChannelDiscover.this.destroy();
+                        PTSEvent event = new PTSEvent( CHANNEL_FOUND );
+                        event.addPayloadElement( String.format("%0"+ CHANNEL_DIGITS + "d", channel) );
+                        emit( event );
+                    });
+                    setTextMode.setOnErrorCallback( () -> {
+                        ChannelDiscover.this.destroy();
+                        emit( new PTSEvent(CHANNEL_NOT_FOUND) );
+                    } );
+                    this.addPrev(setTextMode);
+                    setTextMode.startService(serialio, selfID);
                 }
                 else {
                     flagFirstChannelFound = true;
@@ -87,33 +90,15 @@ public class ChannelDiscover extends PTSService {
         // TODO altre priorità.
         // TODO basterebbe anche solo un sistema di flag strutturato meglio
 
-        PTSService audioRestarter = new PTSService() {
-            @Override
-            public boolean trap(PTSPacket pk) {
-                String action = pk.getAction();
-                boolean isHandled = false;
-
-                switch(action) {
-                    case PTSPacket.ACTION_DEBUG:
-                        String msg = (String) pk.getPayloadElement(0);
-                        if (msg.length() >= 30 && msg.substring(1, 30).equals("Serial check up STATUS ... OK")) {
-                            isHandled = true;
-                            serialio.write(BOARD_MODE_AUDIO);
-                        }
-                        else if ( msg.length() >= 6 && msg.substring(1, 6).equals("audio") ) {
-                            isHandled = true;
-                            this.destroy();
-                            serialio.write( CHANNEL_CHECK + String.format("%0"+ CHANNEL_DIGITS + "d", chnl) );
-                        }
-                        break;
-                }
-
-                return isHandled;
-            }
-        };
+        BoardSetMode audioRestarter = new BoardSetMode( BoardSetMode.SET_BOARD_AUDIO_MODE, () -> {
+            serialio.write( CHANNEL_CHECK + String.format("%0"+ CHANNEL_DIGITS + "d", chnl) );
+        });
+        audioRestarter.setOnErrorCallback( () -> {
+            ChannelDiscover.this.destroy();
+            emit( new PTSEvent(CHANNEL_NOT_FOUND) );
+        } );
         this.addPrev(audioRestarter);
         audioRestarter.startService(serialio, selfID);
-        serialio.write(BOARD_RESTART);
     }
 
     @Override

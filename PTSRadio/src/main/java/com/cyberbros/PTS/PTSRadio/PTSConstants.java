@@ -34,7 +34,7 @@ public class PTSConstants {
 
     CMD_SERVICE_REQUEST_CHAT    = "C",
     CMD_SERVICE_REQUEST_GROUP   = "G",
-    CMD_SERVICE_REQUEST_CALL    = "C",
+    CMD_SERVICE_REQUEST_CALL    = "A",
 
     CMD_SERVICE_ACCEPT  = "Y",
     CMD_SERVICE_REFUSE  = "N",

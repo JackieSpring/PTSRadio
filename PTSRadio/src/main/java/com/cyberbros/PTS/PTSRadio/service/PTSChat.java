@@ -237,7 +237,8 @@ public class PTSChat extends PTSService {
                 if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ) {
                     flagSemaphore = false;
                     notify();
-                    throw new PTSChatIllegalStateException("Timeout during illegal state");
+                    this.destroy();
+                    throw new PTSChatIllegalStateException("Timeout during illegal chat state");
                 }
                 this.destroy();
                 flagChatClosed = true;
@@ -261,7 +262,8 @@ public class PTSChat extends PTSService {
                 if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ){
                     flagSemaphore = false;
                     notify();
-                    throw new PTSChatIllegalStateException("Cannot accept request");
+                    this.destroy();
+                    throw new PTSChatIllegalStateException("Cannot accept chat request");
                 }
                 flagChatOpen = true;
                 emit( new PTSEvent( CHAT_ACCEPTED ) );
@@ -284,10 +286,12 @@ public class PTSChat extends PTSService {
                 if ( ! flagServiceStarted || flagChatClosed || flagChatOpen ){
                     flagSemaphore = false;
                     notify();
-                    throw new PTSChatIllegalStateException("Cannot refuse request");
+                    this.destroy();
+                    throw new PTSChatIllegalStateException("Cannot refuse chat request");
                 }
                 this.destroy();
                 flagChatClosed = true;
+                flagChatOpen = false;
                 emit( new PTSEvent( CHAT_REFUSED ) );
 
                 flagSemaphore = false;
@@ -308,6 +312,7 @@ public class PTSChat extends PTSService {
                 if ( !flagServiceStarted || ! flagChatOpen || flagChatClosed ) {
                     flagSemaphore = false;
                     notify();
+                    this.destroy();
                     throw new PTSChatIllegalStateException("Cannot quit service");
                 }
                 this.destroy();
