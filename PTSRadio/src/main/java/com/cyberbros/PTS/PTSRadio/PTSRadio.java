@@ -407,11 +407,11 @@ public class PTSRadio {
             ev.addPayloadElement( new PTSException("Failed restarting board at boot time"));
             emit(ev);
         } );
-        bootTrap.startService(serialio, ID);
 
-        trapchain = gatewayTrap;
-        trapchain.addNext(bootTrap);
         serialio.setReadListener( serialreader );
+        trapchain = gatewayTrap;
+        bootTrap.startService(serialio, ID);
+        trapchain.addNext(bootTrap);
         this.send( BOARD_RESTART );
     }
 
