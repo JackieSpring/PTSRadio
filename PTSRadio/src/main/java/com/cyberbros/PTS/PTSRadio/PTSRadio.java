@@ -27,6 +27,8 @@ import com.cyberbros.PTS.PTSRadio.io.PTSSerialSimulator;
 import com.cyberbros.PTS.PTSRadio.service.BoardSetMode;
 import com.cyberbros.PTS.PTSRadio.service.BoardTextMode;
 import com.cyberbros.PTS.PTSRadio.service.ChannelDiscover;
+import com.cyberbros.PTS.PTSRadio.service.PTSCall;
+import com.cyberbros.PTS.PTSRadio.service.PTSChat;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
 import java.io.IOException;
@@ -90,9 +92,6 @@ public class PTSRadio {
 
     // BOARD COMMANDS
     private static final String
-    BOARD_MODE_TEXT     = PTSConstants.CMD_BOARD_MODE_TEXT,
-    BOARD_MODE_AUDIO    = PTSConstants.CMD_BOARD_MODE_AUDIO,
-    BOARD_RESTART       = PTSConstants.CMD_BOARD_RESTART,
     BOARD_GET_ID        = PTSConstants.CMD_BOARD_GET_ID;
 
     private final Activity activity;
@@ -362,16 +361,25 @@ public class PTSRadio {
                 PTSEvent outEv;
                 switch(action){
                     case BoardTextMode.BOARD_REQUEST_CHAT:
+                        PTSChat chat = (PTSChat) event.getPayloadElement(0);
+                        trapchain.addNext(chat);
+                        chat.startService( serialio, ID, false );
                         outEv = new PTSEvent(REQUEST_CHAT, event);
                         emit(outEv);
                         break;
                     case BoardTextMode.BOARD_REQUEST_GROUP:
                         // TODO Handle group request
-                        Log.e("initTrapChain", "TODO: Handle group request");
+                        Log.e("PTSRadio textModeTrap", "TODO: Handle group request");
                         break;
                     case BoardTextMode.BOARD_REQUEST_CALL:
+                        PTSCall call = (PTSCall) event.getPayloadElement(0);
+                        trapchain.addNext(call);
+                        call.startService(serialio, ID, false);
+                        outEv = new PTSEvent( REQUEST_CALL, event );
+                        emit( outEv );
+
                         // TODO Handle call request
-                        Log.e("initTrapChain", "TODO: Handle call request");
+                        Log.e("PTSRadio textModeTrap", "TODO: Handle call request audioio");
                         break;
                 }
         } );
@@ -410,9 +418,8 @@ public class PTSRadio {
 
         serialio.setReadListener( serialreader );
         trapchain = gatewayTrap;
-        bootTrap.startService(serialio, ID);
         trapchain.addNext(bootTrap);
-        this.send( BOARD_RESTART );
+        bootTrap.startService(serialio, ID);
     }
 
 // #####################################################

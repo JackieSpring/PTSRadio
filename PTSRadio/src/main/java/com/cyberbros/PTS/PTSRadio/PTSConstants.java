@@ -22,11 +22,15 @@ public class PTSConstants {
     SERVICE_TIMEOUT = 45,
 
     CALL_CHANNEL_FIRST_CHANNEL = 0,
-    CALL_CHANNEL_LAST_CHANNEL = 256,
+    CALL_CHANNEL_LAST_CHANNEL = 50,
     CALL_CHANNEL_INCREMENT = 2;
 
 
     public static final String
+    BANNER_TEXT_MODE = "text",
+    BANNER_AUDIO_MODE = "audio",
+    BANNER_RESET = "reset",
+
     CMD_BOARD_RESTART   = "R",
     CMD_BOARD_MODE_TEXT = "T",
     CMD_BOARD_MODE_AUDIO= "A",

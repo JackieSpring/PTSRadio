@@ -18,12 +18,6 @@ import java.io.IOException;
 import java.util.Iterator;
 
 /*
-TODO:
-    Invio e ricezione di messaggi,
-    Pacchettizazione / Spacchettizazione dei messaggi
-    Ricezione chiusura
- */
-/*
 --- EVENTS ---
     CHAT_ERROR              Errore generico durante una procedura
     CHAT_ACCEPTED           Sessione chat aperta e pronta a comunicare
@@ -98,13 +92,8 @@ public class PTSChat extends PTSService {
 //#############################################################
     public boolean isOpen() {
         synchronized (this) {
-            try {
-                if (flagSemaphore)
-                    wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            return this.flagChatOpen;
+            waitSempahore();
+            return this.flagChatOpen && this.flagServiceStarted;
         }
     }
 
@@ -161,14 +150,7 @@ public class PTSChat extends PTSService {
         String dest = pk.getDestination();
 
         synchronized (this) {
-            if ( flagSemaphore ) {
-                try {
-                    wait();
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+            waitSempahore();
 
             if (flagChatOpen) {
                 try {
@@ -229,76 +211,55 @@ public class PTSChat extends PTSService {
 //#############################################################
     protected synchronized void onTimeout()  throws PTSChatIllegalStateException {
         synchronized (this) {
-            try {
-                if ( flagSemaphore )
-                    wait();
-                flagSemaphore = true;
+            waitSempahore();
+            lockSemaphore();
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ) {
-                    flagSemaphore = false;
-                    notify();
-                    this.destroy();
-                    throw new PTSChatIllegalStateException("Timeout during illegal chat state");
-                }
+            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ) {
+                unlockSemaphore();
                 this.destroy();
-                flagChatClosed = true;
-                emit( new PTSEvent( CHAT_REQUEST_TIMEOUT ) );
-
-                flagSemaphore = false;
-                notify();
-            } catch (InterruptedException e){
-                e.printStackTrace();
+                throw new PTSChatIllegalStateException("Timeout during illegal chat state");
             }
+            this.destroy();
+            flagChatClosed = true;
+            emit( new PTSEvent( CHAT_REQUEST_TIMEOUT ) );
+
+            unlockSemaphore();
         }
     }
 
     protected synchronized void onRequestAccepted() throws PTSChatIllegalStateException {
         synchronized (this){
-            try {
-                if ( flagSemaphore )
-                    wait();
-                flagSemaphore = true;
+            waitSempahore();
+            lockSemaphore();
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ){
-                    flagSemaphore = false;
-                    notify();
-                    this.destroy();
-                    throw new PTSChatIllegalStateException("Cannot accept chat request");
-                }
-                flagChatOpen = true;
-                emit( new PTSEvent( CHAT_ACCEPTED ) );
-
-                flagSemaphore = false;
-                notify();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ){
+                unlockSemaphore();
+                this.destroy();
+                throw new PTSChatIllegalStateException("Cannot accept chat request");
             }
+            flagChatOpen = true;
+            emit( new PTSEvent( CHAT_ACCEPTED ) );
+
+            unlockSemaphore();
         }
     }
 
     protected synchronized void onRequestRefused() throws PTSChatIllegalStateException {
         synchronized (this){
-            try {
-                if ( flagSemaphore )
-                    wait();
-                flagSemaphore = true;
+            waitSempahore();
+            lockSemaphore();
 
-                if ( ! flagServiceStarted || flagChatClosed || flagChatOpen ){
-                    flagSemaphore = false;
-                    notify();
-                    this.destroy();
-                    throw new PTSChatIllegalStateException("Cannot refuse chat request");
-                }
+            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen ){
+                unlockSemaphore();
                 this.destroy();
-                flagChatClosed = true;
-                flagChatOpen = false;
-                emit( new PTSEvent( CHAT_REFUSED ) );
-
-                flagSemaphore = false;
-                notify();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                throw new PTSChatIllegalStateException("Cannot refuse chat request");
             }
+            this.destroy();
+            flagChatClosed = true;
+            flagChatOpen = false;
+            emit( new PTSEvent( CHAT_REFUSED ) );
+
+            unlockSemaphore();
         }
     }
 
@@ -347,6 +308,29 @@ public class PTSChat extends PTSService {
         super.startService(io, id);
         if ( isStartingConnection )
             serialio.write( SERVICE_REQUEST_CHAT + chatMember );
+    }
+
+//#############################################################
+//                  Chat Semaphore
+//#############################################################
+    private void waitSempahore(){
+        try {
+            if ( flagSemaphore )
+                wait();
+        } catch (InterruptedException e) {
+            PTSEvent ev = new PTSEvent( CHAT_ERROR );
+            ev.addPayloadElement(e);
+            emit( ev );
+        }
+    }
+
+    private void lockSemaphore(){
+        flagSemaphore = true;
+    }
+
+    private void unlockSemaphore(){
+        flagSemaphore = false;
+        notify();
     }
 
 }

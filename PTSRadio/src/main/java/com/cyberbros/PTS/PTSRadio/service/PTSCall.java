@@ -5,6 +5,7 @@ import android.util.Log;
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.exception.PTSCallIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
@@ -54,8 +55,14 @@ public class PTSCall extends PTSService {
     }
     public PTSCall(String target, String cnl) {
         super();
-        callMember = target;
-        callChannel = cnl;
+        try {
+            if ( Integer.parseInt(cnl) > PTSConstants.CALL_CHANNEL_LAST_CHANNEL )
+                throw new PTSRuntimeException("Invalid channel");
+            callMember = target;
+            callChannel = cnl;
+        }catch(NumberFormatException ex){
+            throw new PTSRuntimeException("Invalid channel");
+        }
     }
 
 //#############################################################
@@ -64,7 +71,7 @@ public class PTSCall extends PTSService {
     public boolean isOpen() {
         synchronized (this) {
             waitSempahore();
-            return this.flagCallOpen;
+            return this.flagCallOpen && this.flagServiceStarted;
         }
     }
 
@@ -81,7 +88,7 @@ public class PTSCall extends PTSService {
     }
 
     public void accept(){
-        serialio.write(SERVICE_ACCEPT + selfID);
+        serialio.write(SERVICE_ACCEPT + callMember);
         onRequestAccepted();
         // TODO Call accept request
         Log.e( "PTSCall", "TODO: Call .accept() method" );
@@ -138,9 +145,9 @@ public class PTSCall extends PTSService {
                         isHandled = true;
                     }
                 } else {
-                    if ( PTSPacket.ACTION_UNKNOWN.equals(action) && ((String)pk.getPayloadElement(0)).substring(0, 6).equals(callMember + "Y") ){
+                    //if ( PTSPacket.ACTION_UNKNOWN.equals(action) && ((String)pk.getPayloadElement(0)).substring(0, 6).equals(callMember + "Y") ){
                     // TODO Decommentare quando l'errore sul call accept viene corretto
-                    //if (PTSPacket.ACTION_SERVICE_YES.equals(action) && pk.getSource().equals( callMember ) && pk.getDestination().equals(selfID) ) {
+                    if (PTSPacket.ACTION_SERVICE_YES.equals(action) && pk.getSource().equals( callMember ) && pk.getDestination().equals(selfID) ) {
                         onRequestAccepted();
                         isHandled = true;
                     }
@@ -294,8 +301,10 @@ public class PTSCall extends PTSService {
             Log.e("PTSCall", "TODO: startService on startingConnection");
         }
         else {
-            if (callChannel == null)
+            if (callChannel == null || Integer.parseInt(callChannel) > PTSConstants.CALL_CHANNEL_LAST_CHANNEL ) {
+                this.destroy();
                 throw new PTSChatIllegalStateException("Channel not specified");
+            }
             callStartSuffix = SERVICE_START_CLIENT_SUFFIX;
 
             // TODO Handle Call recieving connection

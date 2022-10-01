@@ -3,6 +3,7 @@ package com.cyberbros.PTS.PTSRadio.service;
 import android.util.Log;
 
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
@@ -31,15 +32,16 @@ public class BoardTextMode extends PTSService {
 
         switch ( action ){
             case PTSPacket.ACTION_REQUEST_CALL:
-                //TODO handle request
-                Log.e( "BoardTextMode", "TODO: handle call requests" );
+                if ( ! super.selfID.equals( pk.getDestination() ) )
+                    break;
+                onRequestCall(pk);
+                isHandled = true;
                 break;
             case PTSPacket.ACTION_REQUEST_GROUP:
                 //TODO handle request
                 Log.e( "BoardTextMode", "TODO: handle group requests" );
                 break;
             case PTSPacket.ACTION_REQUEST_CHAT:
-                Log.e("BoardTextMode", "trap: selfID=" + super.selfID);
                 if ( ! super.selfID.equals( pk.getDestination() ) )
                     break;
                 onRequestChat(pk);
@@ -55,8 +57,6 @@ public class BoardTextMode extends PTSService {
 
     private void onRequestChat( PTSPacket pk ){
         PTSChat chat = new PTSChat( pk.getSource() );
-        chat.startService( serialio, selfID, false );
-        this.addPrev(chat);
         PTSEvent ev = new PTSEvent(BOARD_REQUEST_CHAT);
         ev.addPayloadElement( chat );
 
@@ -72,6 +72,30 @@ public class BoardTextMode extends PTSService {
         }, PTSConstants.SERVICE_TIMEOUT * 1000 );
 
         emit(ev);
+    }
+
+    private void onRequestCall( PTSPacket pk ) {
+        PTSCall call;
+        try{
+            call = new PTSCall( pk.getSource(), (String)pk.getPayloadElement(0) );
+            PTSEvent ev = new PTSEvent(BOARD_REQUEST_CALL);
+            ev.addPayloadElement( call );
+
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    synchronized (call){
+                        if( ! call.isOpen() )
+                            call.onTimeout();
+                    }
+                }
+            }, PTSConstants.SERVICE_TIMEOUT * 1000 );
+
+            emit(ev);
+        }
+        catch ( PTSRuntimeException ex ){
+        }
     }
 
     @Override

@@ -72,14 +72,14 @@ public class PTSSerialSimulator extends PTSSerial {
             isTextMode = false;
             isAudioMode = false;
             isChatOpen = false;
-            send("DEBUG: Serial check up STATUS ... OK");
+            send("STATE:" + PTSConstants.BANNER_RESET);
             return;
         }
         if ( ! isTextMode && ! isAudioMode ){
             if ( msg.equals("T") ) {
                 isTextMode = true;
                 isAudioMode = false;
-                send( "DEBUG: text" );
+                send( "STATE:" + PTSConstants.BANNER_TEXT_MODE );
 
                 if ( checkActiveFlag( FLAG_CHAT_REQUEST_SEND ) ) {
                     isChatRequestWaiting = true;
@@ -90,7 +90,7 @@ public class PTSSerialSimulator extends PTSSerial {
             else if ( msg.equals("A") ) {
                 isTextMode = false;
                 isAudioMode = true;
-                send( "DEBUG: audio" );
+                send( "STATE:" + PTSConstants.BANNER_AUDIO_MODE );
             }
         }
         else if ( isTextMode ) {

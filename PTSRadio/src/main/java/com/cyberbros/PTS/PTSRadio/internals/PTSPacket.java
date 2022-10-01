@@ -47,6 +47,7 @@ public class PTSPacket {
 */
     public static final String
     ACTION_UNKNOWN = "unknown",
+    ACTION_STATE = "STATE:",
     ACTION_DEBUG = "DEBUG:",
     ACTION_MESSAGE = "M",
 
@@ -195,6 +196,10 @@ public class PTSPacket {
             pk = new PTSPacket(PTSPacket.ACTION_DEBUG, null, null, pklen);
             pk.addPayloadElement( stringpkt.substring(6) );
 
+        }
+        else if ( stringpklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_STATE) ){
+            pk = new PTSPacket(PTSPacket.ACTION_STATE, null, null, pklen);
+            pk.addPayloadElement( stringpkt.substring(6) );
         }
         // REQUEST_TIMEOUT packet
         else if ( stringpklen >= 15 && stringpkt.substring( 0, 15 ).equals( PTSPacket.ACTION_SERVICE_TIMEOUT ) )

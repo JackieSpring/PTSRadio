@@ -16,11 +16,9 @@ public class BoardSetMode extends PTSService {
     private static final String
     ORDER_BOARD_RESTART = PTSConstants.CMD_BOARD_RESTART,
 
-    BANNER_BOARD_RESTARTED = "Serial check up STATUS ... OK",
-    BANNER_BOARD_TEXT_MODE = "text",
-    BANNER_BOARD_AUDIO_MODE = "audio";
-
-    private static final int BANNERS_PREFIX_LENGTH = 1;
+    BANNER_BOARD_RESTARTED = PTSConstants.BANNER_RESET,
+    BANNER_BOARD_TEXT_MODE = PTSConstants.BANNER_TEXT_MODE,
+    BANNER_BOARD_AUDIO_MODE = PTSConstants.BANNER_AUDIO_MODE;
 
     private final String boardMode;
     private final Runnable callback;
@@ -57,32 +55,40 @@ public class BoardSetMode extends PTSService {
         boolean isHandled = false;
 
         switch(action) {
-            case PTSPacket.ACTION_DEBUG:
-                String msg = (String) pk.getPayloadElement(0);
-                if (    msg.length() >= BANNERS_PREFIX_LENGTH + BANNER_BOARD_RESTARTED.length() &&
-                        msg.substring(BANNERS_PREFIX_LENGTH, BANNERS_PREFIX_LENGTH + BANNER_BOARD_RESTARTED.length() ).equals(BANNER_BOARD_RESTARTED)) {
+            case PTSPacket.ACTION_STATE:
+                String state = (String) pk.getPayloadElement(0);
+                if (    state.length() >= BANNER_BOARD_RESTARTED.length() &&
+                        state.substring(0, BANNER_BOARD_RESTARTED.length() ).equals(BANNER_BOARD_RESTARTED)) {
                     serialio.write(boardMode);
                     isHandled = true;
-                } else if (msg.length() >= BANNERS_PREFIX_LENGTH + boardMode.length()){
-                    String banner ;
+                }
+                else if (state.length() >= boardMode.length()) {
+                    String banner;
                     int bannerLength;
 
                     if ( boardMode.equals(SET_BOARD_TEXT_MODE) )
                         bannerLength = BANNER_BOARD_TEXT_MODE.length();
-                    else if ( boardMode.equals(SET_BOARD_AUDIO_MODE) )
+                    else if ( boardMode.equals((SET_BOARD_AUDIO_MODE)) )
                         bannerLength = BANNER_BOARD_AUDIO_MODE.length();
                     else {
                         this.destroy();
-                        onErrorCallback.run();
+                        if ( onErrorCallback != null )
+                            onErrorCallback.run();
                         break;
                     }
 
-                    banner = msg.substring(BANNERS_PREFIX_LENGTH, BANNERS_PREFIX_LENGTH + bannerLength);
+                    banner = state.substring(0, bannerLength);
 
                     if ( banner.equals(BANNER_BOARD_TEXT_MODE) ||
-                        banner.equals(BANNER_BOARD_AUDIO_MODE)) {
+                            banner.equals(BANNER_BOARD_AUDIO_MODE)) {
                         this.destroy();
-                        callback.run();
+                        if ( callback != null )
+                            callback.run();
+                    }
+                    else {
+                        this.destroy();
+                        if ( onErrorCallback != null )
+                            onErrorCallback.run();
                     }
                 }
                 break;
