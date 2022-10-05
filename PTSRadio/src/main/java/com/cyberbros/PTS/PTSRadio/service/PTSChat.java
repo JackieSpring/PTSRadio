@@ -122,15 +122,18 @@ public class PTSChat extends PTSService {
     }
 
     public void send(String msg) {
-        try {
+        /*try {
             for (Iterator<byte[]> it = mb.msgToPkt(msg); it.hasNext(); ) {
                 byte[] data = it.next();
                 serialio.write(SERVICE_MESSAGE + new String(data) );
             }
+            serialio.write(SERVICE_MESSAGE + new String(msg) );
         } catch (IOException e) {
             //TODO Message error handling
             Log.e("PTSChat", "TODO: ERROR sending message");
-        }
+        }*/
+        // TODO MESSAGGI > 26 byte
+        serialio.write(SERVICE_MESSAGE + new String(msg) );
     }
 
 //#############################################################
@@ -155,6 +158,7 @@ public class PTSChat extends PTSService {
             if (flagChatOpen) {
                 try {
                     if (PTSPacket.ACTION_MESSAGE.equals(action) && member.equals(chatMember) ) {
+                        /*
                         String msg = mb.pktToMsg( (String)pk.getPayloadElement(0), this.chatMember );
                         if ( msg != null ) {
                             //TODO handle message and message protocol
@@ -162,11 +166,11 @@ public class PTSChat extends PTSService {
                             PTSEvent ev = new PTSEvent(CHAT_MESSAGE);
                             ev.addPayloadElement( msg );
                             emit(ev);
-                        }
-                        /*
+                        }*/
+
                         PTSEvent ev = new PTSEvent(CHAT_MESSAGE);
                         ev.addPayloadElement( pk.getPayloadElement(0) );
-                        emit(ev);*/
+                        emit(ev);
                         isHandled = true;
                     } else if (PTSPacket.ACTION_SERVICE_QUIT.equals(action) && member.equals(chatMember)) {
                         onQuit();

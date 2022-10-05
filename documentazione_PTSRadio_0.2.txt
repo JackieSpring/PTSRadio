@@ -280,6 +280,48 @@ ooooooooooooooooooooooooooooooo PTSRadio ooooooooooooooooooooooooooooooooooooooo
 							del simulatore (si veda sezione Simulatore)
 
 _________________________________________________________________________________________________
+ooooooooooooooooooooooooooooooo PTSCall ooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+
+--- Costruttori ---
+
+	public PTSCall(String memeberId)
+
+--- Eventi -------------------- DESCRIZIONE --------------------------- PAYLOAD -----------------
+    CALL_ERROR 			Errore generico durante una procedura	[ (Exception) eccezione ]
+    CALL_NO_CHANNEL		Non è possibile inviare la richiesta
+				poiché non è stato trovato un canale
+				di comunicazione
+    CALL_ACCEPTED		Sessione call aperta e pronta per 
+				comunicare
+    CALL_REFUSED		Richiesta di inizio call inviata,
+				richiesta rifiutata dal callMember
+    CALL_REQUEST_TIMEOUT	Richiesta di inizio call inviata, ma
+				non si è ottenuta risposta.
+				Questo evento viene lanciato anche sul
+				ricevente se impiega troppo tempo a
+				rispondere.
+    CALL_CLOSED			Sessione call terminata
+    CALL_VOICE_BUSY		La 
+    CALL_VOICE_FREE
+
+--- Metodi ---------------------------- DESCRIZIONE --------------------------------------------
+    public void accept()		accetta la richiesta di chat in arrivo, lancia 
+					PTSChatIllegalStateException se la chat non può essere
+					aperta o è gia stata aperta
+    public boolean isOpen()		ritorna true se la chat è stata aperta con successo
+    public String getID()		ritorna l'Id della scheda su cui è attiva questa
+					sessione chat
+    public String getMemberID()		ritorna l'Id della scheda con cui si vuole aprire / si è
+					aperta una chat
+    public void quit()			Esce da unsa sessione di chat aperta
+    public void refuse()		rifiuta la richiesta di chat in arrivo, lancia
+					PTSChatIllegalStateException se la chat è aperta oppure è
+					gia stata chiusa
+    public void send(String msg)	Invia un messaggio sulla sessione di chat
+
+
+
+_________________________________________________________________________________________________
 ooooooooooooooooooooooooooooooo PTSChat ooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
 --- Costruttori ---
@@ -293,7 +335,10 @@ ooooooooooooooooooooooooooooooo PTSChat oooooooooooooooooooooooooooooooooooooooo
     CHAT_REFUSED            	Richiesta di inizio chat inviata, 
 				richiesta rifiutata dal chatMember
     CHAT_REQUEST_TIMEOUT    	Richiesta di inizio chat inviata, ma 
-				non si è ottenuta risposta, oppure
+				non si è ottenuta risposta.
+				Questo evento viene lanciato anche sul
+				ricevente se impiega troppo tempo a
+				rispondere.
     CHAT_MESSAGE            	Sessione chat attiva ha ricevuto un 	[ (Srting) messaggio ]
 				messaggio dal client
     CHAT_CLOSED             	Sessione chat terminata

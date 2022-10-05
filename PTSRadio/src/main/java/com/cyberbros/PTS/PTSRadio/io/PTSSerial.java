@@ -80,6 +80,10 @@ public class PTSSerial {
     }
     public synchronized void write(byte [] arr){
         waitSempahore();
+        String ret = "";
+        for ( byte b : arr )
+            ret += String.valueOf(b) + ",";
+        Log.e("PTSSerial write", "Array= " + ret);
         if ( isopen )
             serial.write(arr);
     }
