@@ -91,6 +91,13 @@ public class BoardTextMode extends PTSService {
                     }
                 }
             }, PTSConstants.SERVICE_TIMEOUT * 1000 );
+            /*
+            * new Timer()
+            * time.schedule( () -> {
+            *       // fai roba
+            * }, <tempo> );
+
+            * */
 
             emit(ev);
         }

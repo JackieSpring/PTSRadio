@@ -301,24 +301,34 @@ ooooooooooooooooooooooooooooooo PTSCall oooooooooooooooooooooooooooooooooooooooo
 				ricevente se impiega troppo tempo a
 				rispondere.
     CALL_CLOSED			Sessione call terminata
-    CALL_VOICE_BUSY		La 
-    CALL_VOICE_FREE
+    CALL_VOICE_BUSY		Il canale audio della sessione call
+				attiva è occupato dall'altro host, 
+				è possibile catturare l'audio tramite
+				listen()
+    CALL_VOICE_FREE		Il canale audio della sessione call
+				attiva è libero e disponibile alla
+				trasmissione tramite talk()
 
 --- Metodi ---------------------------- DESCRIZIONE --------------------------------------------
-    public void accept()		accetta la richiesta di chat in arrivo, lancia 
-					PTSChatIllegalStateException se la chat non può essere
+    public void accept()		accetta la richiesta di call in arrivo, lancia 
+					PTSCallIllegalStateException se la chat non può essere
 					aperta o è gia stata aperta
+    public String getChannel()		ritorna il canale su cui è stata aperta la sessione call
     public boolean isOpen()		ritorna true se la chat è stata aperta con successo
     public String getID()		ritorna l'Id della scheda su cui è attiva questa
 					sessione chat
     public String getMemberID()		ritorna l'Id della scheda con cui si vuole aprire / si è
 					aperta una chat
-    public void quit()			Esce da unsa sessione di chat aperta
-    public void refuse()		rifiuta la richiesta di chat in arrivo, lancia
-					PTSChatIllegalStateException se la chat è aperta oppure è
+    public void listen()		Imposta il dispositivo audio per riprodurre il segnale
+					ricevuto dalla sessione chiamata
+    public void quit()			Esce da una sessione di call aperta
+    public void refuse()		rifiuta la richiesta di call in arrivo, lancia
+					PTSCallIllegalStateException se la call è aperta oppure è
 					gia stata chiusa
-    public void send(String msg)	Invia un messaggio sulla sessione di chat
-
+    public void talk()			imposta il dispositivo audio per ricevere i suoni da 
+					inviare sulla sessione chiamata
+    public void stop()			ferma la ricezione e la trasmissione dei dispositivi
+					audio.
 
 
 _________________________________________________________________________________________________
@@ -421,10 +431,6 @@ ________________________________________________________________________________
     		USER_ONLINE
     		USER_OFFLINE
     		AUDIO_ATTACHED
-    		AUDIO_DETACHED
-    		MISSING_AUDIO_PERMISSION
-		ERROR_AUDIO
-		REQUEST_GROUP
 		REQUEST_CALL
 
 *	Chiamate e gruppi non sono stati implementati

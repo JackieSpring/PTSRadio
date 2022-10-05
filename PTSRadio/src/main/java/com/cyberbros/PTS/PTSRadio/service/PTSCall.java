@@ -247,17 +247,19 @@ public class PTSCall extends PTSService {
         }
 
         BoardSetMode setTextMode = new BoardSetMode( BoardSetMode.SET_BOARD_TEXT_MODE, () -> {
-            waitSempahore();
-            lockSemaphore();
+            synchronized ( PTSCall.this ) {
+                waitSempahore();
+                lockSemaphore();
 
-            audioio.close();
-            audioio = null;
-            this.destroy();
-            flagCallOpen = false;
-            flagCallClosed = true;
-            emit( new PTSEvent(CALL_CLOSED) );
+                audioio.close();
+                audioio = null;
+                this.destroy();
+                flagCallOpen = false;
+                flagCallClosed = true;
+                emit(new PTSEvent(CALL_CLOSED));
 
-            unlockSemaphore();
+                unlockSemaphore();
+            }
         } );
         setTextMode.setOnErrorCallback( () -> emit( new PTSEvent(CALL_ERROR) ) );
         this.addPrev(setTextMode);
