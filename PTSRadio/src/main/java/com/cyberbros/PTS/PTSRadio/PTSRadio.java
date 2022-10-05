@@ -1,22 +1,28 @@
 package com.cyberbros.PTS.PTSRadio;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 
 import com.cyberbros.PTS.PTSRadio.exception.PTSException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRadioException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRadioIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
@@ -115,6 +121,13 @@ public class PTSRadio {
         public void dataRecived(byte[] data) {
             PTSPacket pk = PTSPacket.parsePacket(data);
             trapchain.handle( pk );
+        }
+    };
+
+    private Runnable audioCallback = new Runnable() {
+        @Override
+        public void run() {
+            emit( new PTSEvent(AUDIO_DETACHED) );
         }
     };
 
@@ -230,11 +243,14 @@ public class PTSRadio {
     }
     // TODO DEBUG ONLYYYYYYY #######################################
 
-    public void close() {
+    public synchronized void close() {
         activity.unregisterReceiver(usbreciver);
         if ( flagUsbConnected )
             serialio.close();
-        trapchain.destroyChain();
+        if ( audioio != null )
+            audioio.close();
+        if ( trapchain != null )
+            trapchain.destroyChain();
         trapchain = null;
         flagIsOpen = false;
         flagUsbConnected = false;
@@ -279,7 +295,10 @@ public class PTSRadio {
             return;
 
         serialio.close();
-        trapchain.destroyChain();
+        if ( audioio != null )
+            audioio.close();
+        if ( trapchain != null )
+            trapchain.destroyChain();
         trapchain = null;
         flagUsbConnected = false;
 
@@ -330,6 +349,82 @@ public class PTSRadio {
     }
 
 // #####################################################
+//                  AUDIO METHODS
+// #####################################################
+    // TODO DEBUG
+private String audioType2String( int type ){
+    switch( type ){
+        case AudioDeviceInfo.TYPE_AUX_LINE: return "TYPE_AUX_LINE";
+        //case AudioDeviceInfo.TYPE_BLE_BROADCAST : return "TYPE_BLE_BROADCAST";
+        case AudioDeviceInfo.TYPE_BLE_HEADSET : return "TYPE_BLE_HEADSET";
+        case AudioDeviceInfo.TYPE_BLE_SPEAKER : return "TYPE_BLE_SPEAKER";
+        case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP : return "TYPE_BLUETOOTH_A2DP";
+        case AudioDeviceInfo.TYPE_BLUETOOTH_SCO : return "TYPE_BLUETOOTH_SCO";
+        case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE : return "TYPE_BUILTIN_EARPIECE";
+        case AudioDeviceInfo.TYPE_BUILTIN_MIC : return "TYPE_BUILTIN_MIC";
+        case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : return "TYPE_BUILTIN_SPEAKER";
+        case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE : return "TYPE_BUILTIN_SPEAKER_SAFE";
+        case AudioDeviceInfo.TYPE_BUS : return "TYPE_BUS";
+        case AudioDeviceInfo.TYPE_DOCK : return "TYPE_DOCK";
+        case AudioDeviceInfo.TYPE_FM : return "TYPE_FM";
+        case AudioDeviceInfo.TYPE_FM_TUNER : return "TYPE_FM_TUNER";
+        case AudioDeviceInfo.TYPE_HDMI : return "TYPE_HDMI";
+        case AudioDeviceInfo.TYPE_HDMI_ARC : return "TYPE_HDMI_ARC";
+        case AudioDeviceInfo.TYPE_HDMI_EARC : return "TYPE_HDMI_EARC";
+        case AudioDeviceInfo.TYPE_HEARING_AID : return "TYPE_HEARING_AID";
+        case AudioDeviceInfo.TYPE_IP : return "TYPE_IP";
+        case AudioDeviceInfo.TYPE_LINE_ANALOG : return "TYPE_LINE_ANALOG";
+        case AudioDeviceInfo.TYPE_LINE_DIGITAL : return "TYPE_LINE_DIGITAL";
+        case AudioDeviceInfo.TYPE_REMOTE_SUBMIX : return "TYPE_REMOTE_SUBMIX";
+        case AudioDeviceInfo.TYPE_TELEPHONY : return "TYPE_TELEPHONY";
+        case AudioDeviceInfo.TYPE_TV_TUNER : return "TYPE_TV_TUNER";
+        case AudioDeviceInfo.TYPE_UNKNOWN : return "TYPE_UNKNOWN";
+        case AudioDeviceInfo.TYPE_USB_ACCESSORY : return "TYPE_USB_ACCESSORY";
+        case AudioDeviceInfo.TYPE_USB_DEVICE : return "TYPE_USB_DEVICE";
+        case AudioDeviceInfo.TYPE_USB_HEADSET : return "TYPE_USB_HEADSET";
+        case AudioDeviceInfo.TYPE_WIRED_HEADPHONES : return "TYPE_WIRED_HEADPHONES";
+        case AudioDeviceInfo.TYPE_WIRED_HEADSET : return "TYPE_WIRED_HEADSET";
+        default : return "UNDEFINED";
+    }
+}
+
+    @SuppressLint("NewApi")
+    private AudioDeviceInfo getAudioDevice(int type, boolean issource) {
+        Log.d("getAudioDevice", "DEVICES");
+        for (AudioDeviceInfo audiodev : audioman.getDevices(AudioManager.GET_DEVICES_OUTPUTS | AudioManager.GET_DEVICES_INPUTS)){
+            Log.d("AUDIODEV", "\ntype: " + audioType2String(audiodev.getType()) + "\n" + "issource: " + audiodev.isSource() );
+            if (audiodev.getType() == type && audiodev.isSource() == issource)
+                return audiodev;
+        }
+        return null;
+    }
+
+    private PTSAudio setupAudio() {
+        try {
+            if ( ActivityCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ){
+                emit(new PTSEvent(MISSING_AUDIO_PERMISSION));
+                return null;
+            }
+            AudioDeviceInfo jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, true );
+            AudioDeviceInfo jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, false );
+
+            if ( jackIn == null )
+                jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, true );
+            if ( jackOut == null )
+                jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, false );
+
+Log.e("setupAudio", String.valueOf(jackIn) + "  " + String.valueOf(jackOut));
+            PTSAudio aio = new PTSAudio( jackIn, jackOut, audioman );
+            aio.setOnDetachedCallback(audioCallback);
+            return aio;
+
+        } catch (IOException e) {
+            emit( new PTSEvent(AUDIO_DETACHED) );
+            return null;
+        }
+    }
+
+// #####################################################
 //                  PACKET TRAP INIT
 // #####################################################
     private void initTrapChain(){
@@ -373,8 +468,17 @@ public class PTSRadio {
                         break;
                     case BoardTextMode.BOARD_REQUEST_CALL:
                         PTSCall call = (PTSCall) event.getPayloadElement(0);
-                        trapchain.addNext(call);
-                        call.startService(serialio, ID, false);
+                        PTSAudio aio = setupAudio();
+                        if ( aio == null )
+                            break;
+
+                        try{
+                            trapchain.addNext(call);
+                            call.startService(serialio, ID, aio, false);
+                        }catch(NumberFormatException ex){
+                            call.destroy();
+                            throw new PTSRuntimeException("Invalid channel");
+                        }
                         outEv = new PTSEvent( REQUEST_CALL, event );
                         emit( outEv );
 
@@ -429,7 +533,17 @@ public class PTSRadio {
         if ( serv == null || ! flagIsOpen )
             return;
         trapchain.addNext(serv);
-        serv.startService(serialio, ID);
+
+        if ( PTSCall.class.isInstance( serv ) ) {
+            PTSAudio aio = setupAudio();
+            if (aio == null) {
+                serv.destroy();
+                return;
+            }
+            ((PTSCall)serv).startService(serialio, ID, aio);
+        }
+        else
+            serv.startService(serialio, ID);
     }
 
 

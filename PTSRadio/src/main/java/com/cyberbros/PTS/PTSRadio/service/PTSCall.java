@@ -2,6 +2,8 @@ package com.cyberbros.PTS.PTSRadio.service;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.exception.PTSCallIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
@@ -9,6 +11,7 @@ import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
+import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 
 /*
@@ -42,6 +45,7 @@ public class PTSCall extends PTSService {
     SERVICE_START_HOST_SUFFIX   = PTSConstants.CMD_CALL_START_HOST_SUFFIX,
     SERVICE_START_CLIENT_SUFFIX = PTSConstants.CMD_CALL_START_CLIENT_SUFFIX;
 
+    private PTSAudio audioio;
     private String callMember;
     private String callChannel;
     private String callStartSuffix;
@@ -55,14 +59,8 @@ public class PTSCall extends PTSService {
     }
     public PTSCall(String target, String cnl) {
         super();
-        try {
-            if ( Integer.parseInt(cnl) > PTSConstants.CALL_CHANNEL_LAST_CHANNEL )
-                throw new PTSRuntimeException("Invalid channel");
-            callMember = target;
-            callChannel = cnl;
-        }catch(NumberFormatException ex){
-            throw new PTSRuntimeException("Invalid channel");
-        }
+        callMember = target;
+        callChannel = cnl;
     }
 
 //#############################################################
@@ -90,29 +88,28 @@ public class PTSCall extends PTSService {
     public void accept(){
         serialio.write(SERVICE_ACCEPT + callMember);
         onRequestAccepted();
-        // TODO Call accept request
-        Log.e( "PTSCall", "TODO: Call .accept() method" );
     }
 
     public void refuse(){
         serialio.write( SERVICE_REFUSE + selfID );
         onRequestRefused();
-        // TODO Call refuse request
-        Log.e( "PTSCall", "TODO: Call .refuse() method" );
     }
 
     public void talk(){
         waitSempahore();
         serialio.write( SERVICE_TALK );
-        // TODO Call talk request
-        Log.e( "PTSCall", "TODO: Call .talk() method" );
+        audioio.talk();
     }
 
     public void listen()  {
         waitSempahore();
         serialio.write( SERVICE_LISTEN );
-        // TODO Call listen request
-        Log.e( "PTSCall", "TODO: Call .listen() method" );
+        audioio.listen();
+    }
+
+    public void stop() {
+        waitSempahore();
+        audioio.stop();
     }
 
     public void quit(){
@@ -185,6 +182,7 @@ public class PTSCall extends PTSService {
 
         lockSemaphore();
 
+        audioio.close();
         this.destroy();
         flagCallOpen = false;
         flagCallClosed = true;
@@ -203,6 +201,8 @@ public class PTSCall extends PTSService {
 
         lockSemaphore();
 
+        audioio.close();
+        audioio = null;
         this.destroy();
         flagCallOpen = false;
         flagCallClosed = true;
@@ -224,8 +224,10 @@ public class PTSCall extends PTSService {
                 waitSempahore();
                 lockSemaphore();
 
+                Log.e("PTSCallonRequestAcce", SERVICE_START_PREFIX + callChannel + callStartSuffix);
                 serialio.write(SERVICE_START_PREFIX + callChannel + callStartSuffix);
                 flagCallOpen = true;
+                audioio.start();
                 emit(new PTSEvent(CALL_ACCEPTED));
 
                 unlockSemaphore();
@@ -248,6 +250,8 @@ public class PTSCall extends PTSService {
             waitSempahore();
             lockSemaphore();
 
+            audioio.close();
+            audioio = null;
             this.destroy();
             flagCallOpen = false;
             flagCallClosed = true;
@@ -262,15 +266,27 @@ public class PTSCall extends PTSService {
 
 
 //#############################################################
-//                  Call Service Init
+//                  Call Service Init/Fini
 //#############################################################
 
     @Override
-    public void startService(PTSSerial io, String id) throws PTSChatIllegalStateException {
-        startService(io, id, true);
+    public void destroy(){
+        super.destroy();
+        if ( audioio != null )
+            audioio.close();
+        audioio = null;
     }
 
-    public void startService(PTSSerial io, String id, boolean isStartingConnection) throws PTSChatIllegalStateException {
+    @Override
+    public void startService(PTSSerial io, String id) throws PTSChatIllegalStateException {
+        startService(io, id, null);
+    }
+
+    public void startService(PTSSerial io, String id, PTSAudio aio) throws PTSChatIllegalStateException {
+        startService(io, id, aio, true);
+    }
+
+    public void startService(PTSSerial io, String id, @NonNull PTSAudio aio, boolean isStartingConnection) throws PTSChatIllegalStateException {
         if ( flagCallOpen || flagCallClosed )
             throw new PTSCallIllegalStateException();
 
@@ -278,6 +294,8 @@ public class PTSCall extends PTSService {
             return;
 
         super.startService(io, id);
+        audioio = aio;
+
         if ( isStartingConnection ) {
             callStartSuffix = SERVICE_START_HOST_SUFFIX;
 
@@ -306,7 +324,6 @@ public class PTSCall extends PTSService {
                 throw new PTSChatIllegalStateException("Channel not specified");
             }
             callStartSuffix = SERVICE_START_CLIENT_SUFFIX;
-
             // TODO Handle Call recieving connection
             Log.e("PTSCall", "TODO: startService on recieving connection");
         }

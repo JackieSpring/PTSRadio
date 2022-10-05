@@ -92,6 +92,7 @@ public class BoardSetMode extends PTSService {
                     }
                 }
                 break;
+            case PTSPacket.ACTION_DEBUG:
             case PTSPacket.ACTION_UNKNOWN:
                 break;
             default :

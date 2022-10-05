@@ -23,7 +23,8 @@ public class PTSConstants {
 
     CALL_CHANNEL_FIRST_CHANNEL = 0,
     CALL_CHANNEL_LAST_CHANNEL = 50,
-    CALL_CHANNEL_INCREMENT = 2;
+    CALL_CHANNEL_INCREMENT = 2,
+    CALL_DISTURB_CONSTANT = 30_000;
 
 
     public static final String
