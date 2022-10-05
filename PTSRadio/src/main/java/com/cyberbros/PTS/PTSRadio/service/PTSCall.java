@@ -334,7 +334,7 @@ public class PTSCall extends PTSService {
 //#############################################################
 //                  Call Semaphore
 //#############################################################
-    private void waitSempahore(){
+    private synchronized void waitSempahore(){
         try {
             if ( flagSemaphore )
                 wait();
@@ -345,11 +345,11 @@ public class PTSCall extends PTSService {
         }
     }
 
-    private void lockSemaphore(){
+    private synchronized void lockSemaphore(){
         flagSemaphore = true;
     }
 
-    private void unlockSemaphore(){
+    private synchronized void unlockSemaphore(){
         flagSemaphore = false;
         notify();
     }
