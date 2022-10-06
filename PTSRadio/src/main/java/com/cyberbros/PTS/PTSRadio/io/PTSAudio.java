@@ -34,12 +34,6 @@ public class PTSAudio {
     private AudioDeviceInfo outListenDevice;
     private AudioDeviceInfo inListenDevice;
 
-    private AudioTrack outTalk;
-    private AudioTrack outListen;
-    private AudioRecord inTalk;
-    private AudioRecord inListen;
-
-
 
     private AudioRecord recorder;
     private AudioTrack player;
@@ -93,40 +87,7 @@ public class PTSAudio {
         samplerate = AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC);
         BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(samplerate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         buffer = new short[BUFFER_SIZE];
-/*
-        inTalk = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                samplerate,
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                BUFFER_SIZE);
-        outTalk = new AudioTrack(AudioManager.STREAM_MUSIC,
-                samplerate,
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                BUFFER_SIZE,
-                AudioTrack.MODE_STREAM);
 
-
-        inListen = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
-                samplerate,
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                BUFFER_SIZE);
-        outListen = new AudioTrack(AudioManager.STREAM_MUSIC,
-                samplerate,
-                AudioFormat.CHANNEL_IN_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                BUFFER_SIZE,
-                AudioTrack.MODE_STREAM);
-
-        outTalk.setPlaybackRate(samplerate);
-        outListen.setPlaybackRate(samplerate);
-
-        outTalk.setPreferredDevice(outTalkDevice);
-        outListen.setPreferredDevice(outListenDevice);
-        inTalk.setPreferredDevice(inTalkDevice);
-        inListen.setPreferredDevice(inListenDevice);
-*/
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
                 samplerate,
                 AudioFormat.CHANNEL_IN_STEREO,
@@ -161,12 +122,6 @@ public class PTSAudio {
                 workerThread.join();
 
             buffer = new short[BUFFER_SIZE];
-            /*workerThread = new Thread( () -> {
-                while ( flagIsActive ) {
-                    inTalk.read( buffer, 0, BUFFER_SIZE );
-                    outTalk.write( buffer, 0, BUFFER_SIZE );
-                }
-            } );*/
             recorder.stop();
             player.stop();
 
@@ -180,10 +135,7 @@ public class PTSAudio {
             //    throw new RuntimeException("Something went wrong while strating audio stream");
 
             workerThread = new Thread( () -> {
-                while( true ) {
-                    waitSempahore();
-                    if ( flagIsActive == false )
-                        break;
+                while( flagIsActive ) {
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     player.write( buffer, 0, BUFFER_SIZE );
                     Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive);
@@ -219,12 +171,6 @@ public class PTSAudio {
                 workerThread.join();
 
             buffer = new short[BUFFER_SIZE];
-            /*workerThread = new Thread( () -> {
-                while ( flagIsActive ) {
-                    inListen.read( buffer, 0, BUFFER_SIZE );
-                    outListen.write( buffer, 0, BUFFER_SIZE );
-                }
-            } );*/
             recorder.stop();
             player.stop();
 
@@ -239,20 +185,8 @@ public class PTSAudio {
             //    throw new RuntimeException("Something went wrong while strating audio stream");
 
             workerThread = new Thread( () -> {
-                while( true ) {
-                    waitSempahore();
-                    if ( flagIsActive == false )
-                        break;
+                while( flagIsActive ) {
                     recorder.read( buffer, 0, BUFFER_SIZE );
-                    /*String ret = "";
-                    for ( short s : buffer )
-                        ret += ", " + s;
-                    Log.d("PTSAudio buffer", "" + ret);*/
-                    // new_value = 4000 * sqrt( x / 4000 )
-                    // values under 4000 get
-                    //for ( int i = 0; i < buffer.length; i++ )
-                    //    buffer[i] = (short) ( PTSConstants.CALL_DISTURB_CONSTANT * Math.pow( (buffer[i] & 0xffff) / PTSConstants.CALL_DISTURB_CONSTANT, 1/4) );
-
                     //noiseFilter( buffer );
                     player.write( buffer, 0, BUFFER_SIZE );
                 }
@@ -275,24 +209,8 @@ public class PTSAudio {
 
         if ( flagIsOpen )
             return;
-
-        flagIsOpen = true;
-/*        Log.e("PTSAudio", "Starting outTalk");
-        outTalk.play();
-        Log.e("PTSAudio", "Starting outListen");
-        outListen.play();
-        Log.e("PTSAudio", "Starting inTalk");
-        inTalk.startRecording();
-        Log.e("PTSAudio", "Starting inListen");
-        inListen.startRecording();
         flagIsOpen = true;
 
-        if ( inTalk.getState() != AudioRecord.SUCCESS ||
-            inListen.getState() != AudioRecord.SUCCESS ||
-            outTalk.getState() != AudioTrack.SUCCESS ||
-            outListen.getState() != AudioTrack.SUCCESS)
-            throw new PTSChatIllegalStateException("Error starting audio streams");
-*/
         unlockSemaphore();
     }
 
@@ -307,11 +225,7 @@ public class PTSAudio {
             flagIsActive = false;
             if (workerThread != null)
                 workerThread.join();
-/*
-            outTalk.stop();
-            outListen.stop();
-            inListen.stop();
-            inTalk.stop();*/
+
             recorder.stop();
             player.stop();
         }catch ( InterruptedException ex ){
