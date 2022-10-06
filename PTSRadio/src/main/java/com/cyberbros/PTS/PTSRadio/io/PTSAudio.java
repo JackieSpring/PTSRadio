@@ -161,6 +161,7 @@ public class PTSAudio {
     public synchronized void listen(){
         waitSempahore();
         lockSemaphore();
+        Log.e("PTSAudio listen", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
 
         if ( flagIsOpen == false )
             return;
@@ -180,6 +181,7 @@ public class PTSAudio {
             recorder.startRecording();
             player.play();
 
+            Log.e("PTSAudio listen", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
 
             //if ( recorder.getState() != AudioRecord.SUCCESS || player.getState() != AudioTrack.SUCCESS )
             //    throw new RuntimeException("Something went wrong while strating audio stream");
@@ -189,6 +191,7 @@ public class PTSAudio {
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     //noiseFilter( buffer );
                     player.write( buffer, 0, BUFFER_SIZE );
+                    Log.e("PTSAudio listen thread", "Thread working, flagIsActive=" + flagIsActive);
                 }
             });
 
