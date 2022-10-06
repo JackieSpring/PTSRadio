@@ -138,7 +138,7 @@ public class PTSAudio {
                 while( flagIsActive ) {
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     player.write( buffer, 0, BUFFER_SIZE );
-                    Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive);
+                    Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive + " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) + " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()));
                 }
                 Log.e("PTSAudio talk thread", "Thread DEAD");
             });
@@ -191,7 +191,7 @@ public class PTSAudio {
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     //noiseFilter( buffer );
                     player.write( buffer, 0, BUFFER_SIZE );
-                    Log.e("PTSAudio listen thread", "Thread working, flagIsActive=" + flagIsActive);
+                    Log.e("PTSAudio listen thread", "Thread working, flagIsActive=" + flagIsActive + " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) + " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()));
                 }
             });
 
@@ -275,6 +275,42 @@ public class PTSAudio {
             short temp = values[i];
             current += (temp - current) / SMOOTHING;
             values[i] = current;
+        }
+    }
+    // TODO DEBUG
+    private String audioType2String( int type ){
+        switch( type ){
+            case AudioDeviceInfo.TYPE_AUX_LINE: return "TYPE_AUX_LINE";
+            //case AudioDeviceInfo.TYPE_BLE_BROADCAST : return "TYPE_BLE_BROADCAST";
+            case AudioDeviceInfo.TYPE_BLE_HEADSET : return "TYPE_BLE_HEADSET";
+            case AudioDeviceInfo.TYPE_BLE_SPEAKER : return "TYPE_BLE_SPEAKER";
+            case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP : return "TYPE_BLUETOOTH_A2DP";
+            case AudioDeviceInfo.TYPE_BLUETOOTH_SCO : return "TYPE_BLUETOOTH_SCO";
+            case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE : return "TYPE_BUILTIN_EARPIECE";
+            case AudioDeviceInfo.TYPE_BUILTIN_MIC : return "TYPE_BUILTIN_MIC";
+            case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : return "TYPE_BUILTIN_SPEAKER";
+            case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE : return "TYPE_BUILTIN_SPEAKER_SAFE";
+            case AudioDeviceInfo.TYPE_BUS : return "TYPE_BUS";
+            case AudioDeviceInfo.TYPE_DOCK : return "TYPE_DOCK";
+            case AudioDeviceInfo.TYPE_FM : return "TYPE_FM";
+            case AudioDeviceInfo.TYPE_FM_TUNER : return "TYPE_FM_TUNER";
+            case AudioDeviceInfo.TYPE_HDMI : return "TYPE_HDMI";
+            case AudioDeviceInfo.TYPE_HDMI_ARC : return "TYPE_HDMI_ARC";
+            case AudioDeviceInfo.TYPE_HDMI_EARC : return "TYPE_HDMI_EARC";
+            case AudioDeviceInfo.TYPE_HEARING_AID : return "TYPE_HEARING_AID";
+            case AudioDeviceInfo.TYPE_IP : return "TYPE_IP";
+            case AudioDeviceInfo.TYPE_LINE_ANALOG : return "TYPE_LINE_ANALOG";
+            case AudioDeviceInfo.TYPE_LINE_DIGITAL : return "TYPE_LINE_DIGITAL";
+            case AudioDeviceInfo.TYPE_REMOTE_SUBMIX : return "TYPE_REMOTE_SUBMIX";
+            case AudioDeviceInfo.TYPE_TELEPHONY : return "TYPE_TELEPHONY";
+            case AudioDeviceInfo.TYPE_TV_TUNER : return "TYPE_TV_TUNER";
+            case AudioDeviceInfo.TYPE_UNKNOWN : return "TYPE_UNKNOWN";
+            case AudioDeviceInfo.TYPE_USB_ACCESSORY : return "TYPE_USB_ACCESSORY";
+            case AudioDeviceInfo.TYPE_USB_DEVICE : return "TYPE_USB_DEVICE";
+            case AudioDeviceInfo.TYPE_USB_HEADSET : return "TYPE_USB_HEADSET";
+            case AudioDeviceInfo.TYPE_WIRED_HEADPHONES : return "TYPE_WIRED_HEADPHONES";
+            case AudioDeviceInfo.TYPE_WIRED_HEADSET : return "TYPE_WIRED_HEADSET";
+            default : return "UNDEFINED";
         }
     }
 
