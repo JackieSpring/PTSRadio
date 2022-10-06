@@ -6,6 +6,7 @@ import android.hardware.usb.UsbManager;
 import android.util.Log;
 
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
@@ -75,11 +76,14 @@ public class PTSSerial {
         isopen = true;
     }
 
-    public synchronized void write(String msg){
+    public synchronized void write(String msg) throws PTSRuntimeException {
         this.write(msg.getBytes(StandardCharsets.UTF_8));
     }
-    public synchronized void write(byte [] arr){
+    public synchronized void write(byte [] arr) throws PTSRuntimeException {
         waitSempahore();
+        if ( arr.length > PTSConstants.PACKET_MAX_LEN )
+            throw new PTSRuntimeException("Serial packet too long");
+
         String ret = "";
         for ( byte b : arr )
             ret += String.valueOf(b) + ",";
@@ -117,7 +121,7 @@ public class PTSSerial {
     //#############################################################
 //                  Chat Semaphore
 //#############################################################
-    private void waitSempahore(){
+    private synchronized void waitSempahore(){
         try {
             if ( flagSemaphore )
                 wait();
@@ -126,11 +130,11 @@ public class PTSSerial {
         }
     }
 
-    private void lockSemaphore(){
+    private synchronized void lockSemaphore(){
         flagSemaphore = true;
     }
 
-    private void unlockSemaphore(){
+    private synchronized void unlockSemaphore(){
         flagSemaphore = false;
         notify();
     }

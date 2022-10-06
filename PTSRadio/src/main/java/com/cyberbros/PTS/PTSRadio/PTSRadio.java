@@ -399,21 +399,22 @@ private String audioType2String( int type ){
         return null;
     }
 
+    @SuppressLint("NewApi")
     private PTSAudio setupAudio() {
         try {
             if ( ActivityCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ){
                 emit(new PTSEvent(MISSING_AUDIO_PERMISSION));
                 return null;
             }
-            AudioDeviceInfo jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, true );
-            AudioDeviceInfo jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, false );
+            AudioDeviceInfo jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, true );
+            AudioDeviceInfo jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, false );
 
             if ( jackIn == null )
-                jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, true );
+                jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, true );
             if ( jackOut == null )
-                jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, false );
+                jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, false );
 
-Log.e("setupAudio", String.valueOf(jackIn) + "  " + String.valueOf(jackOut));
+Log.e("setupAudio", audioType2String(jackIn.getType()) + "  " + audioType2String(jackOut.getType()));
             PTSAudio aio = new PTSAudio( jackIn, jackOut, audioman );
             aio.setOnDetachedCallback(audioCallback);
             return aio;

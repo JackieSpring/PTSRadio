@@ -21,6 +21,14 @@ import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 
  */
 
+/*
+TODO
+    è inutile distruggere e ricreare workerThread per chiamate successive dello stesso metodo,
+    converrebbe assegnare un etichetta al thread e ricrearlo solo se il thread attivo ha un
+    etichetta differente
+
+ */
+
 public class PTSCall extends PTSService {
 // EVENTS
     public static final String
@@ -49,8 +57,10 @@ public class PTSCall extends PTSService {
     private String callMember;
     private String callChannel;
     private String callStartSuffix;
+
     private boolean flagCallOpen = false;
     private boolean flagCallClosed = false;
+    private boolean flagTalking = false;
     private boolean flagSemaphore = false;
 
 
@@ -95,21 +105,47 @@ public class PTSCall extends PTSService {
         onRequestRefused();
     }
 
-    public void talk(){
+    public synchronized void talk(){
         waitSempahore();
+        lockSemaphore();
+
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+            throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
+        if ( flagTalking )
+            return;
+
         serialio.write( SERVICE_TALK );
         audioio.talk();
+        flagTalking = true;
+
+        unlockSemaphore();
     }
 
-    public void listen()  {
+    public synchronized void listen()  {
         waitSempahore();
+        lockSemaphore();
+
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+            throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
+
         serialio.write( SERVICE_LISTEN );
         audioio.listen();
+        flagTalking = false;
+
+        unlockSemaphore();
     }
 
     public void stop() {
         waitSempahore();
+        lockSemaphore();
+
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+            throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
+
         audioio.stop();
+        flagTalking = false;
+
+        unlockSemaphore();
     }
 
     public void quit(){
@@ -134,8 +170,10 @@ public class PTSCall extends PTSService {
 
                 if (flagCallOpen) {
                     if ( PTSPacket.ACTION_PTT_GO.equals(action) ) {
-                        emit( new PTSEvent(CALL_VOICE_FREE) );
-                        isHandled = true;
+                        if ( ! flagTalking ) {
+                            emit(new PTSEvent(CALL_VOICE_FREE));
+                            isHandled = true;
+                        }
                     }
                     else if ( PTSPacket.ACTION_PTT_STOP.equals(action) ) {
                         emit( new PTSEvent(CALL_VOICE_BUSY) );
@@ -256,6 +294,7 @@ public class PTSCall extends PTSService {
                 this.destroy();
                 flagCallOpen = false;
                 flagCallClosed = true;
+                flagTalking = false;
                 emit(new PTSEvent(CALL_CLOSED));
 
                 unlockSemaphore();

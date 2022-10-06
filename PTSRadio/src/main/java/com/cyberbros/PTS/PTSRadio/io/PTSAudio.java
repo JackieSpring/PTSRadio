@@ -27,6 +27,8 @@ public class PTSAudio {
 
     private final AudioManager audioman;
 
+    private int SMOOTHING = 25;
+
     private AudioDeviceInfo outTalkDevice;
     private AudioDeviceInfo inTalkDevice;
     private AudioDeviceInfo outListenDevice;
@@ -149,7 +151,7 @@ public class PTSAudio {
     public synchronized void talk(){
         waitSempahore();
         lockSemaphore();
-
+        Log.e("PTSAudio talk", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
         if ( flagIsOpen == false )
             return;
 
@@ -169,20 +171,24 @@ public class PTSAudio {
             player.stop();
 
             recorder.setPreferredDevice( inTalkDevice );
-            player.setPreferredDevice(outTalkDevice);
+            player.setPreferredDevice( outTalkDevice );
 
             recorder.startRecording();
             player.play();
-
+            Log.e("PTSAudio talk", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
             //if ( recorder.getState() != AudioRecord.SUCCESS || player.getState() != AudioTrack.SUCCESS )
             //    throw new RuntimeException("Something went wrong while strating audio stream");
 
             workerThread = new Thread( () -> {
-                waitSempahore();
-                while( flagIsActive ) {
+                while( true ) {
+                    waitSempahore();
+                    if ( flagIsActive == false )
+                        break;
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     player.write( buffer, 0, BUFFER_SIZE );
+                    Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive);
                 }
+                Log.e("PTSAudio talk thread", "Thread DEAD");
             });
 
 
@@ -195,6 +201,8 @@ public class PTSAudio {
         finally {
             unlockSemaphore();
         }
+
+        Log.e("PTSAudio talk", "Final CHECK" + "flagSemaphore=" + flagSemaphore + " workerThread=" + workerThread + " workerThread.isAlive=" + workerThread.isAlive());
     }
 
     @SuppressLint("NewApi")
@@ -231,8 +239,10 @@ public class PTSAudio {
             //    throw new RuntimeException("Something went wrong while strating audio stream");
 
             workerThread = new Thread( () -> {
-                waitSempahore();
-                while( flagIsActive ) {
+                while( true ) {
+                    waitSempahore();
+                    if ( flagIsActive == false )
+                        break;
                     recorder.read( buffer, 0, BUFFER_SIZE );
                     /*String ret = "";
                     for ( short s : buffer )
@@ -242,6 +252,8 @@ public class PTSAudio {
                     // values under 4000 get
                     //for ( int i = 0; i < buffer.length; i++ )
                     //    buffer[i] = (short) ( PTSConstants.CALL_DISTURB_CONSTANT * Math.pow( (buffer[i] & 0xffff) / PTSConstants.CALL_DISTURB_CONSTANT, 1/4) );
+
+                    //noiseFilter( buffer );
                     player.write( buffer, 0, BUFFER_SIZE );
                 }
             });
@@ -340,10 +352,19 @@ public class PTSAudio {
         return null;
     }
 
+    private void noiseFilter( short [] values ) {
+        short current = values[0];
+        for ( int i = 1; i < values.length; i++ ) {
+            short temp = values[i];
+            current += (temp - current) / SMOOTHING;
+            values[i] = current;
+        }
+    }
+
 //#############################################################
 //                  Chat Semaphore
 //#############################################################
-    private void waitSempahore(){
+    private synchronized void waitSempahore(){
         try {
             if ( flagSemaphore )
                 wait();
@@ -352,11 +373,11 @@ public class PTSAudio {
         }
     }
 
-    private void lockSemaphore(){
+    private synchronized void lockSemaphore(){
         flagSemaphore = true;
     }
 
-    private void unlockSemaphore(){
+    private synchronized void unlockSemaphore(){
         flagSemaphore = false;
         notify();
     }

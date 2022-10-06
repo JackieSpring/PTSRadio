@@ -17,7 +17,8 @@ public class PTSConstants {
     PACKET_INVALID_BYTES = 2,
     PACKET_MAX_LEN = 26,
 
-    PING_TIMEOUT = 60,
+    PING_MIN_TIMEOUT = 30,
+    PING_MAX_TIMEOUT = 60,
 
     SERVICE_TIMEOUT = 45,
 

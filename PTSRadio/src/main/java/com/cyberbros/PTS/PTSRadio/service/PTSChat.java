@@ -6,6 +6,7 @@ import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.PTSRadio;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
@@ -122,6 +123,7 @@ public class PTSChat extends PTSService {
     }
 
     public void send(String msg) {
+        try {
         /*try {
             for (Iterator<byte[]> it = mb.msgToPkt(msg); it.hasNext(); ) {
                 byte[] data = it.next();
@@ -132,8 +134,14 @@ public class PTSChat extends PTSService {
             //TODO Message error handling
             Log.e("PTSChat", "TODO: ERROR sending message");
         }*/
-        // TODO MESSAGGI > 26 byte
-        serialio.write(SERVICE_MESSAGE + new String(msg) );
+            // TODO MESSAGGI > 26 byte
+            serialio.write(SERVICE_MESSAGE + new String(msg));
+        }
+        catch(PTSRuntimeException ex){
+            PTSEvent ev = new PTSEvent(CHAT_ERROR);
+            ev.addPayloadElement(ex);
+            emit(ev);
+        }
     }
 
 //#############################################################
