@@ -6,6 +6,7 @@ import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.PTSRadio;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSIllegalArgumentException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSListener;
@@ -329,6 +330,13 @@ public class PTSChat extends PTSService {
             throw new PTSChatIllegalStateException("Cannot start chat service");
         if ( io == null || id == null)
             return;
+
+        if ( id.equals( chatMember ) ) {
+            PTSEvent errev = new PTSEvent(CHAT_ERROR);
+            errev.addPayloadElement( new PTSIllegalArgumentException("Illegal Id") );
+            emit(errev);
+            return;
+        }
 
         super.startService(io, id);
         if ( isStartingConnection )

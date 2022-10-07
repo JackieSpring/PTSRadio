@@ -7,6 +7,8 @@ import androidx.annotation.NonNull;
 import com.cyberbros.PTS.PTSRadio.PTSConstants;
 import com.cyberbros.PTS.PTSRadio.exception.PTSCallIllegalStateException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSChatIllegalStateException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSIllegalArgumentException;
+import com.cyberbros.PTS.PTSRadio.exception.PTSRadioException;
 import com.cyberbros.PTS.PTSRadio.exception.PTSRuntimeException;
 import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 import com.cyberbros.PTS.PTSRadio.internals.PTSPacket;
@@ -97,12 +99,12 @@ public class PTSCall extends PTSService {
         return this.callChannel;
     }
 
-    public void accept(){
+    public void accept() throws PTSCallIllegalStateException {
         serialio.write(SERVICE_ACCEPT + callMember);
         onRequestAccepted();
     }
 
-    public void refuse(){
+    public void refuse() throws PTSCallIllegalStateException{
         serialio.write( SERVICE_REFUSE + selfID );
         onRequestRefused();
     }
@@ -150,7 +152,7 @@ public class PTSCall extends PTSService {
         unlockSemaphore();
     }
 
-    public void quit(){
+    public void quit() throws PTSCallIllegalStateException {
         serialio.write( SERVICE_QUIT );
         onQuit();
     }
@@ -210,7 +212,7 @@ public class PTSCall extends PTSService {
 //                  Call Event Handlers
 //#############################################################
 
-    protected synchronized void onTimeout(){
+    protected synchronized void onTimeout() throws PTSCallIllegalStateException {
         waitSempahore();
 
         if ( !flagServiceStarted ||  flagCallClosed || flagCallOpen ) {
@@ -229,7 +231,7 @@ public class PTSCall extends PTSService {
         unlockSemaphore();
     }
 
-    private synchronized void onRequestRefused(){
+    private synchronized void onRequestRefused() throws PTSCallIllegalStateException {
         waitSempahore();
 
         if ( !flagServiceStarted ||  flagCallClosed || ! flagCallOpen ) {
@@ -249,7 +251,7 @@ public class PTSCall extends PTSService {
         unlockSemaphore();
     }
 
-    private synchronized void onRequestAccepted(){
+    private synchronized void onRequestAccepted() throws PTSCallIllegalStateException {
         waitSempahore();
 
         if ( !flagServiceStarted || flagCallOpen || flagCallClosed ) {
@@ -276,7 +278,7 @@ public class PTSCall extends PTSService {
         setAudioMode.startService(serialio, selfID);
     }
 
-    public synchronized void onQuit(){
+    public synchronized void onQuit() throws PTSCallIllegalStateException {
         waitSempahore();
 
         if ( !flagServiceStarted || flagCallClosed || ! flagCallOpen ) {
@@ -328,16 +330,23 @@ public class PTSCall extends PTSService {
         startService(io, id, null);
     }
 
-    public void startService(PTSSerial io, String id, PTSAudio aio) throws PTSChatIllegalStateException {
+    public void startService(PTSSerial io, String id, PTSAudio aio) throws PTSCallIllegalStateException {
         startService(io, id, aio, true);
     }
 
-    public void startService(PTSSerial io, String id, @NonNull PTSAudio aio, boolean isStartingConnection) throws PTSChatIllegalStateException {
+    public void startService(PTSSerial io, String id, @NonNull PTSAudio aio, boolean isStartingConnection) throws PTSCallIllegalStateException {
         if ( flagCallOpen || flagCallClosed )
             throw new PTSCallIllegalStateException();
 
         if ( io == null || id == null )
             return;
+
+        if ( id.equals( callMember ) ) {
+            PTSEvent errev = new PTSEvent(CALL_ERROR);
+            errev.addPayloadElement( new PTSIllegalArgumentException("Illegal Id") );
+            emit(errev);
+            return;
+        }
 
         super.startService(io, id);
         audioio = aio;
