@@ -100,26 +100,30 @@ public class PTSCall extends PTSService {
     }
 
     public void accept() throws PTSCallIllegalStateException {
-        serialio.write(SERVICE_ACCEPT + callMember);
         onRequestAccepted();
+        serialio.write(SERVICE_ACCEPT + callMember);
     }
 
     public void refuse() throws PTSCallIllegalStateException{
-        serialio.write( SERVICE_REFUSE + selfID );
         onRequestRefused();
+        serialio.write( SERVICE_REFUSE + selfID );
     }
 
     public synchronized void talk(){
         waitSempahore();
         lockSemaphore();
 
-        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false ) {
+            unlockSemaphore();
             throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
-        if ( flagTalking )
+        }
+        if ( flagTalking ) {
+            unlockSemaphore();
             return;
+        }
 
-        serialio.write( SERVICE_TALK );
         audioio.talk();
+        serialio.write( SERVICE_TALK );
         flagTalking = true;
 
         unlockSemaphore();
@@ -129,11 +133,13 @@ public class PTSCall extends PTSService {
         waitSempahore();
         lockSemaphore();
 
-        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false ) {
+            unlockSemaphore();
             throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
+        }
 
-        serialio.write( SERVICE_LISTEN );
         audioio.listen();
+        serialio.write( SERVICE_LISTEN );
         flagTalking = false;
 
         unlockSemaphore();
@@ -143,8 +149,10 @@ public class PTSCall extends PTSService {
         waitSempahore();
         lockSemaphore();
 
-        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false )
+        if ( flagCallOpen == false || flagCallClosed == true || flagServiceStarted == false ) {
+            unlockSemaphore();
             throw new PTSCallIllegalStateException("Cannot talk for unexpected call state");
+        }
 
         audioio.stop();
         flagTalking = false;
@@ -153,8 +161,8 @@ public class PTSCall extends PTSService {
     }
 
     public void quit() throws PTSCallIllegalStateException {
-        serialio.write( SERVICE_QUIT );
         onQuit();
+        serialio.write( SERVICE_QUIT );
     }
 
 //#############################################################
@@ -223,9 +231,9 @@ public class PTSCall extends PTSService {
         lockSemaphore();
 
         audioio.close();
-        this.destroy();
         flagCallOpen = false;
         flagCallClosed = true;
+        this.destroy();
         emit( new PTSEvent( CALL_REQUEST_TIMEOUT) );
 
         unlockSemaphore();
@@ -243,9 +251,9 @@ public class PTSCall extends PTSService {
 
         audioio.close();
         audioio = null;
-        this.destroy();
         flagCallOpen = false;
         flagCallClosed = true;
+        this.destroy();
         emit( new PTSEvent( CALL_REFUSED) );
 
         unlockSemaphore();
@@ -293,10 +301,10 @@ public class PTSCall extends PTSService {
 
                 audioio.close();
                 audioio = null;
-                this.destroy();
                 flagCallOpen = false;
                 flagCallClosed = true;
                 flagTalking = false;
+                this.destroy();
                 emit(new PTSEvent(CALL_CLOSED));
 
                 unlockSemaphore();

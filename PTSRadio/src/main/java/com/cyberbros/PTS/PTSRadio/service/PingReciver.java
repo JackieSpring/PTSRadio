@@ -9,9 +9,12 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class PingReciver extends PTSPacketTrap {
 
@@ -19,17 +22,21 @@ public class PingReciver extends PTSPacketTrap {
     USER_ALIVE = "user_alive",
     USER_DEAD = "user_dead";
 
-    private static final int PING_TIME = PTSConstants.PING_MAX_TIMEOUT + 5;
+    private static final int PING_TIME = PTSConstants.PING_MAX_TIMEOUT;
 
     private String radioID;
     private PTSListener callback;
-    private Set<String> currentPing = new HashSet<String>();
-    private Set<String> oldPing = new HashSet<String>();
+    //private Set<String> currentPing = new HashSet<String>();
+    //private Set<String> oldPing = new HashSet<String>();
+    private HashMap< String, TimerTask > pingTable ;
+    private Timer timer;
     private boolean pingSemaphore = false;
 
 
     public PingReciver( String id ) {
         radioID = id;
+        timer = new Timer();
+        pingTable = new HashMap();
     }
 
 
@@ -43,10 +50,36 @@ public class PingReciver extends PTSPacketTrap {
 
         if ( PTSPacket.ACTION_SESSION_PING.equals(action) ){
             String host = (String)pk.getSource();
+            TimerTask pingTimeoutTask;
+
             if ( host.equals(radioID) )
                 return false;
 
-            currentPing.add(host);
+            pingTimeoutTask = new TimerTask() {
+                @Override
+                public void run() {
+                    if ( ! pingTable.containsKey(host) )
+                        return;
+                    pingTable.remove(host);
+                    PTSEvent ev = new PTSEvent(USER_DEAD);
+                    ev.addPayloadElement(host);
+                    emit(ev);
+                }
+            };
+
+            if ( ! pingTable.containsKey( host ) ) {
+                pingTable.put(host, pingTimeoutTask);
+                timer.schedule(pingTimeoutTask, PING_TIME * 1000 );
+                PTSEvent ev = new PTSEvent( USER_ALIVE );
+                ev.addPayloadElement( host );
+                emit(ev);
+            }
+            else {
+                pingTable.get( host ).cancel();
+                pingTable.put( host, pingTimeoutTask );
+                timer.schedule( pingTimeoutTask, PING_TIME * 1000 );
+            }
+
             return true;
         }
 

@@ -110,8 +110,8 @@ public class PTSChat extends PTSService {
     }
 
     public void accept() throws PTSChatIllegalStateException {
-        serialio.write( SERVICE_ACCEPT + chatMember );
         onRequestAccepted();
+        serialio.write( SERVICE_ACCEPT + chatMember );
     }
 
     public void refuse() throws PTSChatIllegalStateException {
@@ -121,8 +121,8 @@ public class PTSChat extends PTSService {
     }
 
     public void quit() throws PTSChatIllegalStateException {
-        serialio.write( SERVICE_QUIT );
         onQuit();
+        serialio.write( SERVICE_QUIT );
     }
 
     public void send(String msg) {
@@ -234,8 +234,8 @@ public class PTSChat extends PTSService {
                 this.destroy();
                 throw new PTSChatIllegalStateException("Timeout during illegal chat state");
             }
-            this.destroy();
             flagChatClosed = true;
+            this.destroy();
             emit( new PTSEvent( CHAT_REQUEST_TIMEOUT ) );
 
             unlockSemaphore();
@@ -269,9 +269,9 @@ public class PTSChat extends PTSService {
                 this.destroy();
                 throw new PTSChatIllegalStateException("Cannot refuse chat request");
             }
-            this.destroy();
             flagChatClosed = true;
             flagChatOpen = false;
+            this.destroy();
             emit( new PTSEvent( CHAT_REFUSED ) );
 
             unlockSemaphore();
@@ -291,14 +291,17 @@ public class PTSChat extends PTSService {
                     this.destroy();
                     throw new PTSChatIllegalStateException("Cannot quit service");
                 }
-                this.destroy();
                 flagChatClosed = true;
+                flagChatOpen = false;
+                this.destroy();
                 emit( new PTSEvent(CHAT_CLOSED) );
 
                 flagSemaphore = false;
-                notify();
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            }
+            finally {
+                notify();
             }
         }
     }

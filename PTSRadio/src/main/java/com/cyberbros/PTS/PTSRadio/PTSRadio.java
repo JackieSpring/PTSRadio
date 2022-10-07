@@ -36,6 +36,7 @@ import com.cyberbros.PTS.PTSRadio.service.ChannelDiscover;
 import com.cyberbros.PTS.PTSRadio.service.PTSCall;
 import com.cyberbros.PTS.PTSRadio.service.PTSChat;
 import com.cyberbros.PTS.PTSRadio.service.PTSService;
+import com.cyberbros.PTS.PTSRadio.service.PingReciver;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -444,6 +445,7 @@ private String audioType2String( int type ){
         BoardSetMode bootTrap;
         PTSPacketTrap initTrap;
         BoardTextMode textModeTrap;
+        PingReciver pingReciverTrap;
 
         // Empty trap, used only as head of the chain
         gatewayTrap = new PTSPacketTrap() {
@@ -455,6 +457,21 @@ private String audioType2String( int type ){
                 return false;
             }
         };
+
+        pingReciverTrap = new PingReciver(ID);
+        pingReciverTrap.setListener( (PTSEvent event) -> {
+            PTSEvent notifyHost;
+            if ( PingReciver.USER_ALIVE.equals( event ) ){
+                notifyHost = new PTSEvent( USER_ONLINE );
+                notifyHost.addPayloadElement( event.getPayloadElement(0) );
+                emit(notifyHost);
+            }
+            else if ( PingReciver.USER_DEAD.equals( event ) ) {
+                notifyHost = new PTSEvent( USER_OFFLINE );
+                notifyHost.addPayloadElement( event.getPayloadElement(0) );
+                emit( notifyHost );
+            }
+        }  );
 
         textModeTrap = new BoardTextMode();
         textModeTrap.setListener( (PTSEvent event ) -> {
@@ -500,6 +517,7 @@ private String audioType2String( int type ){
                 if ( action.equals( PTSPacket.ACTION_SESSION_ID ) ) {
                     ID = (String) pk.getPayloadElement(0);
 
+                    this.addNext( pingReciverTrap );
                     this.addNext( textModeTrap );
                     textModeTrap.startService(serialio, ID);
                     this.destroy();
