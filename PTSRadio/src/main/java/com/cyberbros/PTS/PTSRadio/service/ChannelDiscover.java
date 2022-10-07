@@ -102,9 +102,11 @@ public class ChannelDiscover extends PTSService {
     }
 
     @Override
-    public void startService(PTSSerial io, String id ) {
-        super.startService(io, id);
+    public boolean startService(PTSSerial io, String id ) {
+        if( ! super.startService(io, id) )
+            return false;
         discoverChannel( START_CHANNEL );
+        return true;
     }
 
 }

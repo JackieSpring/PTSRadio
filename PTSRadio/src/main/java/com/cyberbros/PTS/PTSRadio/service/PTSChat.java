@@ -229,11 +229,12 @@ public class PTSChat extends PTSService {
             waitSempahore();
             lockSemaphore();
 
-            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ) {
+            if ( flagChatClosed || flagChatOpen  ) {
                 unlockSemaphore();
                 this.destroy();
                 throw new PTSChatIllegalStateException("Timeout during illegal chat state");
             }
+            flagChatOpen = false;
             flagChatClosed = true;
             this.destroy();
             emit( new PTSEvent( CHAT_REQUEST_TIMEOUT ) );
@@ -247,7 +248,7 @@ public class PTSChat extends PTSService {
             waitSempahore();
             lockSemaphore();
 
-            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen  ){
+            if ( flagChatClosed || flagChatOpen  ){
                 unlockSemaphore();
                 this.destroy();
                 throw new PTSChatIllegalStateException("Cannot accept chat request");
@@ -264,7 +265,7 @@ public class PTSChat extends PTSService {
             waitSempahore();
             lockSemaphore();
 
-            if ( ! flagServiceStarted || flagChatClosed || flagChatOpen ){
+            if ( flagChatClosed || flagChatOpen ){
                 unlockSemaphore();
                 this.destroy();
                 throw new PTSChatIllegalStateException("Cannot refuse chat request");
@@ -285,7 +286,7 @@ public class PTSChat extends PTSService {
                     wait();
                 flagSemaphore = true;
 
-                if ( !flagServiceStarted || ! flagChatOpen || flagChatClosed ) {
+                if ( ! flagChatOpen || flagChatClosed ) {
                     flagSemaphore = false;
                     notify();
                     this.destroy();
@@ -322,28 +323,31 @@ public class PTSChat extends PTSService {
 
     // PTSRadio.startService();
     @Override
-    public void startService( PTSSerial io, String id ) throws PTSChatIllegalStateException {
-        startService(io, id, true);
+    public boolean startService( PTSSerial io, String id ) throws PTSChatIllegalStateException {
+        return startService(io, id, true);
     }
 
 
     // PTSRadio -> REQUEST_CHAT
-    public void startService( PTSSerial io, String id, boolean isStartingConnection ) throws PTSChatIllegalStateException {
+    public boolean startService( PTSSerial io, String id, boolean isStartingConnection ) throws PTSChatIllegalStateException {
         if ( flagChatOpen || flagChatClosed )
             throw new PTSChatIllegalStateException("Cannot start chat service");
         if ( io == null || id == null)
-            return;
+            return false;
 
         if ( id.equals( chatMember ) ) {
             PTSEvent errev = new PTSEvent(CHAT_ERROR);
             errev.addPayloadElement( new PTSIllegalArgumentException("Illegal Id") );
             emit(errev);
-            return;
+            return false;
         }
 
-        super.startService(io, id);
+        if ( ! super.startService(io, id) )
+            return false;
+
         if ( isStartingConnection )
             serialio.write( SERVICE_REQUEST_CHAT + chatMember );
+        return true;
     }
 
 //#############################################################

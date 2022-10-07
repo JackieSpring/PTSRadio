@@ -105,8 +105,10 @@ public class BoardSetMode extends PTSService {
     }
 
     @Override
-    public void startService(PTSSerial io, String id) {
-        super.startService(io, id);
+    public boolean startService(PTSSerial io, String id) {
+        if ( ! super.startService(io, id)  )
+            return false;
         serialio.write( ORDER_BOARD_RESTART );
+        return true;
     }
 }

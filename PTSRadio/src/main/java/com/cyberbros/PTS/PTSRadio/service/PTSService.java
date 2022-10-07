@@ -19,11 +19,14 @@ public abstract class PTSService extends PTSPacketTrap {
         this.callback = l;
     }
 
-    public void startService( PTSSerial io, String id ) {
+    public boolean startService( PTSSerial io, String id ) {
+        if ( flagServiceStarted )
+            return false;
         serialio = io;
         selfID = id;
         flagServiceStarted = true;
-    };
+        return true;
+    }
 
     protected void emit(PTSEvent e){
         if ( callback != null )

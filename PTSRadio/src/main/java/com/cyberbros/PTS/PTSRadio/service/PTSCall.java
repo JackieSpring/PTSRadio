@@ -223,9 +223,9 @@ public class PTSCall extends PTSService {
     protected synchronized void onTimeout() throws PTSCallIllegalStateException {
         waitSempahore();
 
-        if ( !flagServiceStarted ||  flagCallClosed || flagCallOpen ) {
+        if (  flagCallClosed || flagCallOpen ) {
             this.destroy();
-            throw new PTSCallIllegalStateException("Timeout during illegal chat state");
+            throw new PTSCallIllegalStateException("Timeout during illegal call state");
         }
 
         lockSemaphore();
@@ -242,7 +242,7 @@ public class PTSCall extends PTSService {
     private synchronized void onRequestRefused() throws PTSCallIllegalStateException {
         waitSempahore();
 
-        if ( !flagServiceStarted ||  flagCallClosed || ! flagCallOpen ) {
+        if (  flagCallClosed || ! flagCallOpen ) {
             this.destroy();
             throw new PTSCallIllegalStateException("Cannot refuse call request");
         }
@@ -262,7 +262,7 @@ public class PTSCall extends PTSService {
     private synchronized void onRequestAccepted() throws PTSCallIllegalStateException {
         waitSempahore();
 
-        if ( !flagServiceStarted || flagCallOpen || flagCallClosed ) {
+        if ( flagCallOpen || flagCallClosed ) {
             this.destroy();
             throw new PTSCallIllegalStateException("Cannot accept call request");
         }
@@ -334,29 +334,35 @@ public class PTSCall extends PTSService {
     }
 
     @Override
-    public void startService(PTSSerial io, String id) throws PTSChatIllegalStateException {
-        startService(io, id, null);
+    public boolean startService(PTSSerial io, String id) throws PTSChatIllegalStateException {
+        return startService(io, id, null);
     }
 
-    public void startService(PTSSerial io, String id, PTSAudio aio) throws PTSCallIllegalStateException {
-        startService(io, id, aio, true);
+    public boolean startService(PTSSerial io, String id, PTSAudio aio) throws PTSCallIllegalStateException {
+        return startService(io, id, aio, true);
     }
 
-    public void startService(PTSSerial io, String id, @NonNull PTSAudio aio, boolean isStartingConnection) throws PTSCallIllegalStateException {
-        if ( flagCallOpen || flagCallClosed )
+    public boolean startService(PTSSerial io, String id, @NonNull PTSAudio aio, boolean isStartingConnection) throws PTSCallIllegalStateException {
+        if ( flagCallOpen || flagCallClosed ) {
+            this.destroy();
             throw new PTSCallIllegalStateException();
+        }
 
-        if ( io == null || id == null )
-            return;
+        if ( io == null || id == null || aio == null ) {
+            this.destroy();
+            return false;
+        }
 
         if ( id.equals( callMember ) ) {
+            this.destroy();
             PTSEvent errev = new PTSEvent(CALL_ERROR);
             errev.addPayloadElement( new PTSIllegalArgumentException("Illegal Id") );
             emit(errev);
-            return;
+            return false;
         }
 
-        super.startService(io, id);
+        if ( ! super.startService(io, id) )
+            return false;
         audioio = aio;
 
         if ( isStartingConnection ) {
@@ -390,6 +396,7 @@ public class PTSCall extends PTSService {
             // TODO Handle Call recieving connection
             Log.e("PTSCall", "TODO: startService on recieving connection");
         }
+        return true;
     }
 
 //#############################################################

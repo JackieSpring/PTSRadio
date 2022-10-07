@@ -550,21 +550,21 @@ private String audioType2String( int type ){
 // #####################################################
 //                  SERVICE API
 // #####################################################
-    public void startService (PTSService serv){
+    public boolean startService (PTSService serv){
         if ( serv == null || ! flagIsOpen )
-            return;
+            return false;
         trapchain.addNext(serv);
 
         if ( PTSCall.class.isInstance( serv ) ) {
             PTSAudio aio = setupAudio();
             if (aio == null) {
                 serv.destroy();
-                return;
+                return false;
             }
-            ((PTSCall)serv).startService(serialio, ID, aio);
+            return ((PTSCall)serv).startService(serialio, ID, aio);
         }
         else
-            serv.startService(serialio, ID);
+            return serv.startService(serialio, ID);
     }
 
 

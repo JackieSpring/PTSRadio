@@ -106,9 +106,7 @@ public class BoardTextMode extends PTSService {
     }
 
     @Override
-    public void startService(PTSSerial io, String id) {
-        super.serialio = io;
-        super.selfID = id;
-        super.flagServiceStarted = true;
+    public boolean startService(PTSSerial io, String id) {
+        return super.startService(io,id);
     }
 }
