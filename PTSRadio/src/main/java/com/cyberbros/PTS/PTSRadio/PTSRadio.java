@@ -310,6 +310,7 @@ public class PTSRadio {
     private synchronized void onUsbAttached( UsbDevice device ){
         if ( flagUsbConnected )
             return;
+        // TODO: inserire controllo usb
         initRadio(device);
     }
 
@@ -318,8 +319,7 @@ public class PTSRadio {
         try {
             serialio = new PTSSerial(device, usbman);
             initTrapChain();
-            // TODO create ID filter
-            Log.e("onUsbPermission", "TODO: create ID filter " + device.getDeviceName());
+
             flagIsOpen = true;
             flagUsbRequestSent = false;
             flagUsbConnected = true;
@@ -338,13 +338,21 @@ public class PTSRadio {
         // TODO: A volte confonde i device e si connette al device sbagliato
         Log.e("findDevice", "TODO: migliorare filtro device");
         HashMap<String, UsbDevice> devlist = usbman.getDeviceList();
-        for (UsbDevice dev : devlist.values() )
-            if ( PTSConstants.USB_VENDOR_ID == dev.getVendorId() &&
-                 PTSConstants.USB_PRODUCT_ID == dev.getProductId() &&
-                 PTSConstants.USB_CLASS == dev.getDeviceClass() &&
-                 PTSConstants.USB_SUBCLASS == dev.getDeviceSubclass() &&
-                 PTSConstants.USB_PROTOCOL == dev.getDeviceProtocol())
-            return dev;
+        for (UsbDevice dev : devlist.values() ) {
+            Log.d("PTSRadio findDevice",
+                    "USB_VENDOR_ID =" + dev.getVendorId() +
+                            " USB_VENDOR_ID =" + dev.getVendorId() +
+                            " USB_VENDOR_ID =" + dev.getVendorId() +
+                            " USB_PRODUCT_ID =" + dev.getProductId() +
+                            " USB_CLASS =" + dev.getDeviceClass() +
+                            " USB_PROTOCOL =" + dev.getDeviceProtocol());
+            if (PTSConstants.USB_VENDOR_ID == dev.getVendorId() &&
+                    PTSConstants.USB_PRODUCT_ID == dev.getProductId() &&
+                    PTSConstants.USB_CLASS == dev.getDeviceClass() &&
+                    PTSConstants.USB_SUBCLASS == dev.getDeviceSubclass() &&
+                    PTSConstants.USB_PROTOCOL == dev.getDeviceProtocol())
+                return dev;
+        }
         return null;
     }
 
@@ -443,9 +451,7 @@ Log.e("setupAudio", audioType2String(jackIn.getType()) + "  " + audioType2String
             @Override
             public boolean trap(PTSPacket pk) {
                 // TODO DEBUG ##########################
-                Log.d("initTrapChain", "printChain");
                 printChain();
-                Log.d("GatewayTrap", String.valueOf(pk));
                 // TODO DEBUG ##########################
                 return false;
             }
@@ -482,9 +488,6 @@ Log.e("setupAudio", audioType2String(jackIn.getType()) + "  " + audioType2String
                         }
                         outEv = new PTSEvent( REQUEST_CALL, event );
                         emit( outEv );
-
-                        // TODO Handle call request
-                        Log.e("PTSRadio textModeTrap", "TODO: Handle call request audioio");
                         break;
                 }
         } );

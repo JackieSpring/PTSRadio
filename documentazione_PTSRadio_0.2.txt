@@ -554,3 +554,17 @@ Esempi:
 
 
 
+
+
+
+// If you have a fixed frame rate 
+smoothedValue += (newValue - smoothedValue) / smoothing 
+// If you have a varying frame rate 
+smoothedValue += timeSinceLastUpdate * (newValue - smoothedValue) / smoothing 
+
+
+
+
+
+
+

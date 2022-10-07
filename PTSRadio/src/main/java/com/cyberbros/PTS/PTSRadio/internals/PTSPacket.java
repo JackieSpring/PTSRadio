@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-// TODO: Il parsing è buggato a causa di inconsistenze del protocollo della scheda, Ho applicato dei workaround che DEVONO essere rimossi
 /*
 ____PACKET________________SRC__DST__PAYLOAD
     ACTION_UNKNOWN                  [fullPacket]
@@ -156,34 +155,7 @@ public class PTSPacket {
             stringpkt = stringpkt.substring(0, stringpkt.lastIndexOf("\r\n") ); //stringpkt.replace("\r\n", "");
 
         stringpklen = stringpkt.length();
-/*
-        // TODO
-        if ( stringpklen >= 6 && stringpkt.substring(0, 6).equals(PTSPacket.ACTION_DEBUG) ) {
 
-            // TODO: Rimuovere questo WorkAround non appena il protocollo verrà aggiustato
-
-            String REQUEST_RESPONSE_DEBUG = "messaggio destinato a noi    \r\n";
-            String REQUEST_DEBUG = "richiesta chat  ";
-            int debugIndex;
-            int startIndex;
-            int endIndex;
-
-            debugIndex = stringpkt.indexOf(REQUEST_RESPONSE_DEBUG);
-            if ( debugIndex != -1 ) {
-                startIndex = debugIndex + REQUEST_RESPONSE_DEBUG.length();
-                endIndex = stringpkt.indexOf("\r\n", startIndex);
-                stringpkt = stringpkt.substring(startIndex, endIndex);
-                stringpklen = stringpkt.length();
-            }
-
-            debugIndex = stringpkt.indexOf(REQUEST_DEBUG);
-            if ( debugIndex != -1 ) {
-                stringpkt = stringpkt.substring(23, 34);
-                stringpklen = stringpkt.length();
-            }
-
-        }// TODO
-*/
         if ( stringpklen > 5 ) {
             action = String.valueOf(stringpkt.charAt(5));
             source = stringpkt.substring(0, 5);

@@ -5,6 +5,7 @@ public class PTSConstants {
     VERSION_MAJOR   = 0,
     VERSION_MINOR   = 2,
 
+    ID_LENGTH = 5,
 
     USB_BAUD_RATE   = 9600,
     USB_DATA_BITS   = 8,

@@ -19,15 +19,12 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSEvent;
 
 import java.io.IOException;
 
-/* TODO
-    RIMUOVERE codice inutile
- */
 
 public class PTSAudio {
 
     private final AudioManager audioman;
 
-    private int SMOOTHING = 25;
+    private int SMOOTHING = 1;
 
     private AudioDeviceInfo outTalkDevice;
     private AudioDeviceInfo inTalkDevice;
@@ -112,7 +109,7 @@ public class PTSAudio {
     public synchronized void talk(){
         waitSempahore();
         lockSemaphore();
-        Log.e("PTSAudio talk", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
+        //Log.e("PTSAudio talk", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
         if ( flagIsOpen == false )
             return;
 
@@ -130,17 +127,22 @@ public class PTSAudio {
 
             recorder.startRecording();
             player.play();
-            Log.e("PTSAudio talk", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
-            //if ( recorder.getState() != AudioRecord.SUCCESS || player.getState() != AudioTrack.SUCCESS )
-            //    throw new RuntimeException("Something went wrong while strating audio stream");
+            //Log.e("PTSAudio talk", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
+            if ( recorder.getState() != AudioRecord.STATE_INITIALIZED || player.getState() != AudioTrack.STATE_INITIALIZED )
+                throw new RuntimeException("Something went wrong while starting audio stream");
 
             workerThread = new Thread( () -> {
+                int retR, retP;
                 while( flagIsActive ) {
-                    recorder.read( buffer, 0, BUFFER_SIZE );
-                    player.write( buffer, 0, BUFFER_SIZE );
-                    Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive + " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) + " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()));
+                    retR = recorder.read( buffer, 0, BUFFER_SIZE );
+                    retP = player.write( buffer, 0, BUFFER_SIZE );
+                    /*Log.e("PTSAudio talk thread", "Thread working, flagIsActive=" + flagIsActive +
+                            " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) +
+                            " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()) +
+                            " retR=" + retR +
+                            " retP=" + retP);*/
                 }
-                Log.e("PTSAudio talk thread", "Thread DEAD");
+                //Log.e("PTSAudio talk thread", "Thread DEAD");
             });
 
 
@@ -154,14 +156,14 @@ public class PTSAudio {
             unlockSemaphore();
         }
 
-        Log.e("PTSAudio talk", "Final CHECK" + "flagSemaphore=" + flagSemaphore + " workerThread=" + workerThread + " workerThread.isAlive=" + workerThread.isAlive());
+        //Log.e("PTSAudio talk", "Final CHECK" + "flagSemaphore=" + flagSemaphore + " workerThread=" + workerThread + " workerThread.isAlive=" + workerThread.isAlive());
     }
 
     @SuppressLint("NewApi")
     public synchronized void listen(){
         waitSempahore();
         lockSemaphore();
-        Log.e("PTSAudio listen", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
+        //Log.e("PTSAudio listen", "flagIsOpen=" + flagIsOpen + " flagIsActive=" + flagIsActive + " workerThread="+ workerThread );
 
         if ( flagIsOpen == false )
             return;
@@ -181,17 +183,22 @@ public class PTSAudio {
             recorder.startRecording();
             player.play();
 
-            Log.e("PTSAudio listen", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
+            //Log.e("PTSAudio listen", "recorder.getState()=" + recorder.getState() + " player.getState()=" + player.getState());
 
-            //if ( recorder.getState() != AudioRecord.SUCCESS || player.getState() != AudioTrack.SUCCESS )
-            //    throw new RuntimeException("Something went wrong while strating audio stream");
+            if ( recorder.getState() != AudioRecord.STATE_INITIALIZED || player.getState() != AudioTrack.STATE_INITIALIZED )
+                throw new RuntimeException("Something went wrong while stating audio stream");
 
             workerThread = new Thread( () -> {
+                int retR, retP;
                 while( flagIsActive ) {
-                    recorder.read( buffer, 0, BUFFER_SIZE );
-                    //noiseFilter( buffer );
-                    player.write( buffer, 0, BUFFER_SIZE );
-                    Log.e("PTSAudio listen thread", "Thread working, flagIsActive=" + flagIsActive + " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) + " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()));
+                    retR = recorder.read( buffer, 0, BUFFER_SIZE );
+                    noiseFilter( buffer );
+                    retP = player.write( buffer, 0, BUFFER_SIZE );
+                    /*Log.e("PTSAudio listen thread", "Thread working, flagIsActive=" + flagIsActive +
+                            " audioDeviceRecorder=" + audioType2String(recorder.getRoutedDevice().getType()) +
+                            " audioDeviceTrack=" + audioType2String(player.getRoutedDevice().getType()) +
+                            " retR=" + retR +
+                            " retP=" + retP);*/
                 }
             });
 

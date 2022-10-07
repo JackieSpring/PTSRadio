@@ -69,6 +69,8 @@ public class PTSCall extends PTSService {
     }
     public PTSCall(String target, String cnl) {
         super();
+        if ( target.length() != PTSConstants.ID_LENGTH )
+            throw new PTSRuntimeException("Invalid ID");
         callMember = target;
         callChannel = cnl;
     }
@@ -151,8 +153,6 @@ public class PTSCall extends PTSService {
     public void quit(){
         serialio.write( SERVICE_QUIT );
         onQuit();
-        // TODO Call quit request
-        Log.e( "PTSCall", "TODO: Call .quit() method" );
     }
 
 //#############################################################
@@ -313,9 +313,14 @@ public class PTSCall extends PTSService {
     @Override
     public void destroy(){
         super.destroy();
+        if ( ! flagCallClosed )
+            if ( flagCallOpen )
+                serialio.write( SERVICE_QUIT );
         if ( audioio != null )
             audioio.close();
         audioio = null;
+        flagCallOpen = false;
+        flagCallClosed = true;
     }
 
     @Override

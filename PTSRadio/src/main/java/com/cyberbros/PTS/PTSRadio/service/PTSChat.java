@@ -83,6 +83,8 @@ public class PTSChat extends PTSService {
 
     public PTSChat( String target ){
         super();
+        if ( target.length() != PTSConstants.ID_LENGTH )
+            throw new PTSRuntimeException("Invalid ID");
         chatMember = target;
         mb = new PTSMessageBuilder();
     }
@@ -118,8 +120,8 @@ public class PTSChat extends PTSService {
     }
 
     public void quit() throws PTSChatIllegalStateException {
-        onQuit();
         serialio.write( SERVICE_QUIT );
+        onQuit();
     }
 
     public void send(String msg) {
@@ -303,6 +305,17 @@ public class PTSChat extends PTSService {
 //#############################################################
 //                  Chat Service Init
 //#############################################################
+
+    @Override
+    public void destroy(){
+        super.destroy();
+        if ( ! flagChatClosed )
+            if ( flagChatOpen )
+                serialio.write( SERVICE_QUIT );
+        flagChatOpen = false;
+        flagChatClosed = true;
+    }
+
     // PTSRadio.startService();
     @Override
     public void startService( PTSSerial io, String id ) throws PTSChatIllegalStateException {

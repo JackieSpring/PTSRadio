@@ -4,11 +4,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-/*
-* TODO OGNI OPERAZIONE SULLA CHAIN VA SINCRONIZZATA CON wait() e notify()
-*
-* */
-
 public abstract class PTSPacketTrap {
     private PTSPacketTrap prev;
     private PTSPacketTrap next;

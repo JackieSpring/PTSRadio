@@ -38,5 +38,11 @@ public abstract class PTSService extends PTSPacketTrap {
     }
 
     @Override
+    public void destroy(){
+        super.destroy();
+        flagServiceStarted = false;
+    }
+
+    @Override
     public abstract boolean trap(PTSPacket pk);
 }
