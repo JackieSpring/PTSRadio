@@ -422,7 +422,6 @@ private String audioType2String( int type ){
             if ( jackOut == null )
                 jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, false );
 
-Log.e("setupAudio", audioType2String(jackIn.getType()) + "  " + audioType2String(jackOut.getType()));
             PTSAudio aio = new PTSAudio( jackIn, jackOut, audioman );
             aio.setOnDetachedCallback(audioCallback);
             return aio;
