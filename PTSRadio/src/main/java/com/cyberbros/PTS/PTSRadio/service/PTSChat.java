@@ -18,6 +18,8 @@ import com.cyberbros.PTS.PTSRadio.service.PTSService;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /*
 --- EVENTS ---
@@ -74,12 +76,22 @@ public class PTSChat extends PTSService {
     SERVICE_MESSAGE     = PTSConstants.CMD_SERVICE_MESSAGE,
     SERVICE_REQUEST_CHAT= PTSConstants.CMD_SERVICE_REQUEST_CHAT;
 
+    private static final int TIMEOUT = PTSConstants.SERVICE_TIMEOUT;
+
     private String chatMember;
     private PTSMessageBuilder mb;
     private boolean flagChatOpen = false;
     private boolean flagChatClosed = false;
     private boolean flagSemaphore = false;
 
+    private TimerTask recivedRequestTimeout = new TimerTask() {
+        @Override
+        public void run() {
+            waitSempahore();
+            if ( flagServiceStarted && ! flagChatOpen && ! flagChatClosed )
+                onTimeout();
+        }
+    };
 
 
     public PTSChat( String target ){
@@ -112,11 +124,13 @@ public class PTSChat extends PTSService {
     public void accept() throws PTSChatIllegalStateException {
         onRequestAccepted();
         serialio.write( SERVICE_ACCEPT + chatMember );
+        recivedRequestTimeout.cancel();
     }
 
     public void refuse() throws PTSChatIllegalStateException {
         onRequestRefused();
         serialio.write( SERVICE_REFUSE + chatMember );
+        recivedRequestTimeout.cancel();
         this.destroy();
     }
 
@@ -185,7 +199,6 @@ public class PTSChat extends PTSService {
                         isHandled = true;
                     } else if (PTSPacket.ACTION_SERVICE_QUIT.equals(action) && member.equals(chatMember)) {
                         onQuit();
-                        emit( new PTSEvent(CHAT_CLOSED) );
                         isHandled = true;
                     }
                 }
@@ -347,6 +360,8 @@ public class PTSChat extends PTSService {
 
         if ( isStartingConnection )
             serialio.write( SERVICE_REQUEST_CHAT + chatMember );
+        else
+            (new Timer()).schedule( recivedRequestTimeout, TIMEOUT*10000 );
         return true;
     }
 

@@ -321,6 +321,17 @@ public class PTSRadio {
             serialio = new PTSSerial(device, usbman);
             initTrapChain();
 
+            AudioDeviceInfo jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, true );
+            AudioDeviceInfo jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADSET, false );
+
+            if ( jackIn == null )
+                jackIn = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, true );
+            if ( jackOut == null )
+                jackOut = getAudioDevice( AudioDeviceInfo.TYPE_WIRED_HEADPHONES, false );
+
+            if ( jackIn == null || jackOut == null )
+                emit( new PTSEvent(AUDIO_DETACHED) );
+
             flagIsOpen = true;
             flagUsbRequestSent = false;
             flagUsbConnected = true;
@@ -453,6 +464,7 @@ private String audioType2String( int type ){
             public boolean trap(PTSPacket pk) {
                 // TODO DEBUG ##########################
                 printChain();
+                Log.d("GatewayTrap", String.valueOf(pk));
                 // TODO DEBUG ##########################
                 return false;
             }

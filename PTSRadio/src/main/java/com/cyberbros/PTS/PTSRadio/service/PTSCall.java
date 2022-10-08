@@ -16,6 +16,9 @@ import com.cyberbros.PTS.PTSRadio.internals.PTSPacketTrap;
 import com.cyberbros.PTS.PTSRadio.io.PTSAudio;
 import com.cyberbros.PTS.PTSRadio.io.PTSSerial;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /*
  new PTSCall("id") -> setListener -> startService(io,id) -> ChannelDiscover -> CHANNEL_FOUND -> send(REQUEST+ccc) -> requestOK -> AUDIO_MODE -> AcccB -> CALL_ACCEPTED
 
@@ -55,6 +58,8 @@ public class PTSCall extends PTSService {
     SERVICE_START_HOST_SUFFIX   = PTSConstants.CMD_CALL_START_HOST_SUFFIX,
     SERVICE_START_CLIENT_SUFFIX = PTSConstants.CMD_CALL_START_CLIENT_SUFFIX;
 
+    private static final int TIMEOUT = PTSConstants.SERVICE_TIMEOUT;
+
     private PTSAudio audioio;
     private String callMember;
     private String callChannel;
@@ -65,6 +70,14 @@ public class PTSCall extends PTSService {
     private boolean flagTalking = false;
     private boolean flagSemaphore = false;
 
+    private TimerTask recivedRequestTimeout = new TimerTask() {
+        @Override
+        public void run() {
+            waitSempahore();
+            if ( flagServiceStarted && ! flagCallOpen && ! flagCallClosed )
+                onTimeout();
+        }
+    };
 
     public PTSCall(String target) {
         this(target, null);
@@ -102,11 +115,13 @@ public class PTSCall extends PTSService {
     public void accept() throws PTSCallIllegalStateException {
         onRequestAccepted();
         serialio.write(SERVICE_ACCEPT + callMember);
+        recivedRequestTimeout.cancel();
     }
 
     public void refuse() throws PTSCallIllegalStateException{
         onRequestRefused();
         serialio.write( SERVICE_REFUSE + selfID );
+        recivedRequestTimeout.cancel();
     }
 
     public synchronized void talk(){
@@ -230,7 +245,8 @@ public class PTSCall extends PTSService {
 
         lockSemaphore();
 
-        audioio.close();
+        if ( audioio != null )
+            audioio.close();
         flagCallOpen = false;
         flagCallClosed = true;
         this.destroy();
@@ -249,7 +265,8 @@ public class PTSCall extends PTSService {
 
         lockSemaphore();
 
-        audioio.close();
+        if (audioio != null)
+            audioio.close();
         audioio = null;
         flagCallOpen = false;
         flagCallClosed = true;
@@ -299,7 +316,8 @@ public class PTSCall extends PTSService {
                 waitSempahore();
                 lockSemaphore();
 
-                audioio.close();
+                if ( audioio != null )
+                    audioio.close();
                 audioio = null;
                 flagCallOpen = false;
                 flagCallClosed = true;
@@ -393,6 +411,7 @@ public class PTSCall extends PTSService {
                 throw new PTSChatIllegalStateException("Channel not specified");
             }
             callStartSuffix = SERVICE_START_CLIENT_SUFFIX;
+            (new Timer()).schedule(recivedRequestTimeout, TIMEOUT * 1000);
             // TODO Handle Call recieving connection
             Log.e("PTSCall", "TODO: startService on recieving connection");
         }
